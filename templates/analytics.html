@@ -11,56 +11,12 @@
         .analytics-grid {
             display: flex;
             flex-direction: column;
-            gap: 28px;
-        }
-        .charts-row-1 {
-            display: grid;
-            grid-template-columns: 1.6fr 1.10fr;
             gap: 24px;
-        }
-        .charts-row-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        .charts-row-3 {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-        }
-        .charts-row-4 {
-            display: grid;
-            grid-template-columns: 1.3fr 1fr;
-            gap: 24px;
-        }
-        .chart-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            min-height: 340px;
-        }
-        .chart-card h4 {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #ffffff;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 12px;
-            margin-bottom: 4px;
-        }
-        .chart-container {
-            position: relative;
-            flex: 1;
-            width: 100%;
-            height: 100%;
         }
         .permission-progress-card {
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 20px;
             justify-content: center;
             height: 100%;
         }
@@ -79,7 +35,7 @@
             height: 12px;
             border-radius: 6px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .progress-bar-fill {
             height: 100%;
@@ -87,12 +43,12 @@
             transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         .fill-success {
-            background-color: var(--success-color);
-            box-shadow: 0 0 8px var(--success-color);
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
         }
         .fill-danger {
-            background-color: var(--error-color);
-            box-shadow: 0 0 8px var(--error-color);
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
         }
         .loading-cover {
             position: fixed;
@@ -100,7 +56,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: var(--bg-color);
+            background-color: var(--bg-primary);
             z-index: 9999;
             display: flex;
             justify-content: center;
@@ -111,11 +67,6 @@
             opacity: 0;
             pointer-events: none;
         }
-        @media (max-width: 992px) {
-            .charts-row-1, .charts-row-2, .charts-row-4 {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
@@ -125,69 +76,36 @@
     </div>
 
     <div class="admin-wrapper animate-page-load">
-        <!-- Mobile Header -->
-        <header class="mobile-header">
-            <div class="logo">Viutck</div>
-            <div class="mobile-header-right">
-                <button class="hamburger" id="hamburger-btn" aria-label="Toggle Navigation">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-            </div>
-        </header>
+        <!-- Hamburger button -->
+        <button class="hamburger" id="hamburger">
+            <span></span><span></span><span></span>
+        </button>
+
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <span class="logo-text">Viutck</span>
-                <span class="logo-badge">Admin</span>
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <span>Viutck</span>
+                <span class="badge">Admin</span>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a href="/admin#dashboard" class="nav-item" data-target="dashboard-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin#locations" class="nav-item" data-target="locations-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            Locations
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin#generate" class="nav-item" data-target="generate-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            Generate Link
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin#links" class="nav-item" data-target="links-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                            All Links
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/analytics" class="nav-item active">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                            Analytics
-                        </a>
-                    </li>
-                    <li class="nav-logout">
-                        <a href="{{ url_for('logout') }}" class="nav-item logout-link">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                            Logout
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+            <ul class="nav-links">
+                <li><a href="/admin#dashboard" class="nav-link" data-target="dashboard-section"><i>📊</i> Dashboard</a></li>
+                <li><a href="/admin#locations" class="nav-link" data-target="locations-section"><i>📍</i> Locations</a></li>
+                <li><a href="/admin#generate" class="nav-link" data-target="generate-section"><i>➕</i> Generate Link</a></li>
+                <li><a href="/admin#links" class="nav-link" data-target="links-section"><i>🔗</i> All Links</a></li>
+                <li><a href="/analytics" class="nav-link active"><i>📈</i> Analytics</a></li>
+                <li><a href="/geofence" class="nav-link"><i>🗺️</i> Geofence <span class="badge-danger hidden" id="geofence-alert-badge" style="margin-left: auto;">0</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-link logout"><i>🚪</i> Logout</a>
+            </div>
+        </nav>
 
-        <!-- Main Content Wrapper -->
+        <!-- Main Content -->
         <main class="main-content">
-            <!-- Topbar -->
+            <!-- Topbar (Visible on Desktop) -->
             <header class="topbar">
                 <div class="topbar-left">
                     <h1>Analytics Dashboard</h1>
@@ -216,7 +134,7 @@
                                 </div>
                             </div>
                             <div class="stat-card-footer">
-                                <span style="color: var(--success-color);">↑ Overall captures count</span>
+                                <span style="color: var(--success);">↑ Overall captures count</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -264,7 +182,7 @@
                     </div>
 
                     <!-- Row 1: Line Chart & Doughnut Device Types -->
-                    <div class="charts-row-1">
+                    <div class="charts-grid">
                         <div class="chart-card">
                             <h4>Captures over last 14 days</h4>
                             <div class="chart-container">
@@ -280,7 +198,7 @@
                     </div>
 
                     <!-- Row 2: Top 10 Cities & Browsers -->
-                    <div class="charts-row-2">
+                    <div class="charts-grid">
                         <div class="chart-card">
                             <h4>Top 10 Cities</h4>
                             <div class="chart-container">
@@ -296,8 +214,8 @@
                     </div>
 
                     <!-- Row 3: Hourly Heatmap -->
-                    <div class="charts-row-3">
-                        <div class="chart-card">
+                    <div class="charts-grid">
+                        <div class="chart-card full-width">
                             <h4>Activity by Hour of Day (Heatmap)</h4>
                             <div class="chart-container">
                                 <canvas id="bar-hourly"></canvas>
@@ -306,7 +224,7 @@
                     </div>
 
                     <!-- Row 4: Connection Types & Permission Progress -->
-                    <div class="charts-row-4">
+                    <div class="charts-grid">
                         <div class="chart-card">
                             <h4>Connection Network Types</h4>
                             <div class="chart-container">
@@ -334,8 +252,8 @@
                                         <div id="bar-gps-denied" class="progress-bar-fill fill-danger" style="width: 0%;"></div>
                                     </div>
                                 </div>
-                                <div class="progress-item">
-                                    <div class="progress-labels" style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">
+                                <div class="progress-item" style="margin-top: 10px;">
+                                    <div class="progress-labels" style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">
                                         <span>Average Accuracy</span>
                                         <span id="label-avg-accuracy">N/A</span>
                                     </div>
@@ -349,60 +267,86 @@
                         <div class="card-header">
                             <h3>Device Fingerprint Details (Last 20 Captures)</h3>
                         </div>
-                        <div class="card-body table-responsive">
-                            <table class="data-table" id="fingerprint-table">
-                                <thead>
-                                    <tr>
-                                        <th>Time</th>
-                                        <th>Label</th>
-                                        <th>Device</th>
-                                        <th>Browser</th>
-                                        <th>OS</th>
-                                        <th>Screen</th>
-                                        <th>Timezone</th>
-                                        <th>Cores</th>
-                                        <th>RAM</th>
-                                        <th>Battery</th>
-                                        <th>Canvas Hash</th>
-                                        <th>Fonts</th>
-                                        <th>Network</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="fingerprint-list">
-                                    <!-- Populated via JS -->
-                                </tbody>
-                            </table>
+                        <div class="card-body" style="padding: 0;">
+                            <div class="table-wrapper">
+                                <table class="data-table" id="fingerprint-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Label</th>
+                                            <th>Device</th>
+                                            <th>Browser</th>
+                                            <th>OS</th>
+                                            <th>Screen</th>
+                                            <th>Timezone</th>
+                                            <th>Cores</th>
+                                            <th>RAM</th>
+                                            <th>Battery</th>
+                                            <th>Canvas Hash</th>
+                                            <th>Fonts</th>
+                                            <th>Network</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fingerprint-list">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
-    </div>
 
-    <!-- Background overlay for mobile sidebar -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <!-- Toast Notifications Container -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             const loadingCover = document.getElementById('loading-cover');
-            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const hamburgerBtn = document.getElementById('hamburger');
             const sidebar = document.getElementById('sidebar');
-            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-            // Mobile toggle
-            hamburgerBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('open');
-                sidebarOverlay.classList.toggle('open');
-            });
-            sidebarOverlay.addEventListener('click', function() {
-                sidebar.classList.remove('open');
-                sidebarOverlay.classList.remove('open');
+            // Sidebar toggler
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                    sidebarOverlay.classList.toggle('active');
+                });
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('active');
+                });
+            }
+
+            // Close sidebar on link click (mobile)
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                        sidebarOverlay.classList.remove('active');
+                    }
+                });
             });
 
-            // Global Chart Options
+            // Chart.js Global Config
             Chart.defaults.color = '#a0a0b0';
-            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
-            Chart.defaults.font.family = "'Outfit', sans-serif";
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+            Chart.defaults.font.family = 'Segoe UI, sans-serif';
+
+            const defaultOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#a0a0b0', padding: 16, font: { size: 12 } }
+                    }
+                }
+            };
 
             try {
                 const res = await fetch('/api/analytics');
@@ -429,7 +373,7 @@
                 
                 document.getElementById('label-avg-accuracy').textContent = data.avg_accuracy ? `${data.avg_accuracy} meters` : 'N/A';
 
-                // Render Tables
+                // Render Table
                 renderFingerprintTable(data.recent_locations);
 
                 // Render Charts
@@ -452,12 +396,11 @@
                 list.innerHTML = '';
                 
                 if (!recentLocations || recentLocations.length === 0) {
-                    list.innerHTML = `<tr><td colspan="13" class="text-center text-muted" style="padding:40px 0;">No fingerprint entries captured yet.</td></tr>`;
+                    list.innerHTML = `<tr><td colspan="13" class="text-center text-muted" style="padding:40px 0; text-align:center;">No fingerprint entries captured yet.</td></tr>`;
                     return;
                 }
 
                 recentLocations.forEach(loc => {
-                    // Fetch full location entry metrics
                     fetch('/api/locations')
                         .then(res => res.ok ? res.json() : [])
                         .then(allLocs => {
@@ -465,20 +408,15 @@
                             if (!fullLoc) return;
                             
                             const tr = document.createElement('tr');
-                            
                             const deviceType = fullLoc.is_tablet ? 'Tablet' : (fullLoc.is_mobile ? 'Mobile' : 'Desktop');
-                            
-                            // Parse OS/Browser
                             const browserVal = fullLoc.user_agent ? parseBrowserName(fullLoc.user_agent) : 'Unknown';
                             
-                            // Battery
                             let batteryStr = 'N/A';
                             if (fullLoc.battery_level !== null) {
                                 const bLevel = Math.round(fullLoc.battery_level * 100);
                                 batteryStr = `${bLevel}% (${fullLoc.battery_charging ? 'Charging' : 'Bat'})`;
                             }
                             
-                            // Fonts count
                             const fontCount = fullLoc.fonts_detected ? fullLoc.fonts_detected.split(',').length : 0;
                             
                             tr.innerHTML = `
@@ -548,8 +486,7 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...defaultOptions,
                         plugins: { legend: { display: false } },
                         scales: {
                             y: { beginAtZero: true, ticks: { precision: 0 } }
@@ -571,10 +508,9 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...defaultOptions,
                         plugins: {
-                            legend: { position: 'bottom' }
+                            legend: { position: 'bottom', labels: { color: '#a0a0b0', font: { size: 12 } } }
                         }
                     }
                 });
@@ -596,9 +532,8 @@
                         }]
                     },
                     options: {
+                        ...defaultOptions,
                         indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { beginAtZero: true, ticks: { precision: 0 } }
@@ -624,10 +559,9 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...defaultOptions,
                         plugins: {
-                            legend: { position: 'bottom' }
+                            legend: { position: 'bottom', labels: { color: '#a0a0b0', font: { size: 12 } } }
                         }
                     }
                 });
@@ -650,8 +584,7 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...defaultOptions,
                         plugins: { legend: { display: false } },
                         scales: {
                             y: { beginAtZero: true, ticks: { precision: 0 } }
@@ -659,6 +592,28 @@
                     }
                 });
             }
+
+            // Poller for geofence alerts count
+            async function checkAlertsBadge() {
+                try {
+                    const res = await fetch('/api/geofence-alerts');
+                    if (res.ok) {
+                        const alerts = await res.json();
+                        const unreadCount = alerts.filter(a => !a.is_read).length;
+                        const badge = document.getElementById('geofence-alert-badge');
+                        if (badge) {
+                            if (unreadCount > 0) {
+                                badge.textContent = unreadCount;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            checkAlertsBadge();
+            setInterval(checkAlertsBadge, 15000);
 
             function renderConnectionsChart(byConnection) {
                 const ctx = document.getElementById('bar-connections').getContext('2d');
@@ -676,8 +631,7 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...defaultOptions,
                         plugins: { legend: { display: false } },
                         scales: {
                             y: { beginAtZero: true, ticks: { precision: 0 } }

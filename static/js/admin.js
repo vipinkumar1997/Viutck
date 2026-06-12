@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Nav elements
-    const navItems = document.querySelectorAll('.nav-item:not(.logout-link)');
+    const navItems = document.querySelectorAll('.sidebar .nav-link:not(.logout)');
     const sections = document.querySelectorAll('.tab-section');
     const pageTitle = document.getElementById('page-title');
-    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const hamburgerBtn = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
 
     // Stats Card elements
     const statLocations = document.getElementById('stat-locations');
@@ -54,29 +54,67 @@ document.addEventListener('DOMContentLoaded', function() {
     // Alert tracking
     let lastUnreadAlertCount = 0;
 
-    // Toast Notifications
-    function showToast(title, message, type = 'success') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <div class="toast-title">${escapeHtml(title)}</div>
-                <div class="toast-message">${escapeHtml(message)}</div>
-            </div>
-            <button class="toast-close">&times;</button>
-        `;
-        container.appendChild(toast);
-
-        toast.querySelector('.toast-close').addEventListener('click', () => {
-            toast.remove();
+    // Global Sidebar toggler logic
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('active');
         });
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
 
+    // Close sidebar on link click (mobile)
+    document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+            }
+        });
+    });
+
+    // Dual-signature global showToast function
+    function showToast(messageOrTitle, messageOrType = 'info', typeOrDuration = 3000) {
+        let message = messageOrTitle;
+        let type = messageOrType;
+        let duration = typeof typeOrDuration === 'number' ? typeOrDuration : 3000;
+        
+        // Match older three-argument calls: showToast(title, message, type)
+        if (typeof typeOrDuration === 'string') {
+            message = `<b>${messageOrTitle}</b>: ${messageOrType}`;
+            type = typeOrDuration;
+            duration = 5000;
+        }
+        
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.innerHTML = `
+            <span>${message}</span>
+            <button class="toast-close" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer; line-height:1; margin-left:12px;">&times;</button>
+        `;
+        
+        toast.querySelector('.toast-close').onclick = function() {
+            toast.remove();
+        };
+        
+        container.appendChild(toast);
+        
         setTimeout(() => {
             if (toast.parentNode) {
-                toast.remove();
+                toast.style.animation = 'slideInToast 0.3s ease reverse';
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
             }
-        }, 5000);
+        }, duration);
     }
 
     // Web Audio API Soft Beep
@@ -90,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
             gainNode.connect(audioCtx.destination);
 
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 frequency
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
             
             gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
@@ -106,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Browser Tab Flashing
     let flashInterval = null;
     function flashTabTitle() {
-        if (flashInterval) return; // Already flashing
+        if (flashInterval) return;
         const originalTitle = document.title;
         let isAlert = false;
         flashInterval = setInterval(() => {
@@ -125,13 +163,17 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('mousemove', stopFlashing);
     }
 
-    // Nav and Tab switching
+    // Tab Nav Switching
     navItems.forEach(item => {
         item.addEventListener('click', function(e) {
             const targetId = this.getAttribute('data-target');
-            if (!targetId) return; // Allow normal link navigation (e.g. /geofence)
+            if (!targetId) return; // Allow normal routing
             e.preventDefault();
             switchTab(targetId, this.textContent.trim());
+            
+            // Set URL hash silently without trigger reloading
+            const cleanHash = targetId.replace('-section', '');
+            window.history.pushState(null, null, `#${cleanHash}`);
         });
     });
 
@@ -144,46 +186,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        sections.forEach(sec => sec.classList.remove('active'));
-        document.getElementById(targetId).classList.add('active');
+        sections.forEach(sec => sec.style.display = 'none');
+        const activeSection = document.getElementById(targetId);
+        if (activeSection) activeSection.style.display = 'block';
 
-        pageTitle.textContent = titleText;
+        if (pageTitle) pageTitle.textContent = titleText;
 
-        // Close sidebar on mobile
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('open');
-        hamburgerBtn.classList.remove('open');
-
-        // Force map recalculation
+        // Force Leaflet recalculation
         if (targetId === 'dashboard-section' && map) {
             setTimeout(() => map.invalidateSize(), 200);
         }
     }
 
-    // Bind Stat Cards clicks to trigger Tab clicks
+    // Hash Navigation Switcher on Page Loads & Changes
+    function handleHashNav() {
+        const hash = window.location.hash;
+        if (hash) {
+            const targetId = hash.substring(1) + '-section';
+            const navItem = document.querySelector(`.sidebar .nav-link[data-target="${targetId}"]`);
+            if (navItem) {
+                switchTab(targetId, navItem.textContent.trim());
+            }
+        } else {
+            // Default to dashboard
+            switchTab('dashboard-section', 'Dashboard');
+        }
+    }
+
+    window.addEventListener('hashchange', handleHashNav);
+
+    // Bind Stat Cards triggers
     document.getElementById('card-locations-trigger').addEventListener('click', () => {
         switchTab('locations-section', 'Locations');
+        window.history.pushState(null, null, '#locations');
     });
 
     document.getElementById('card-links-trigger').addEventListener('click', () => {
         switchTab('links-section', 'All Links');
+        window.history.pushState(null, null, '#links');
     });
 
     document.getElementById('card-active-trigger').addEventListener('click', () => {
         switchTab('links-section', 'All Links');
-    });
-
-    // Mobile Hamburger
-    hamburgerBtn.addEventListener('click', function() {
-        this.classList.toggle('open');
-        sidebar.classList.toggle('open');
-        sidebarOverlay.classList.toggle('open');
-    });
-
-    sidebarOverlay.addEventListener('click', function() {
-        this.classList.remove('open');
-        sidebar.classList.remove('open');
-        hamburgerBtn.classList.remove('open');
+        window.history.pushState(null, null, '#links');
     });
 
     // Initialize Map
@@ -274,11 +319,12 @@ document.addEventListener('DOMContentLoaded', function() {
     tabBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             tabBtns.forEach(b => b.classList.remove('active'));
-            tabPanels.forEach(p => p.style.display = 'none');
+            tabPanels.forEach(p => p.classList.remove('active'));
             
             this.classList.add('active');
             const targetTab = this.getAttribute('data-tab');
-            document.getElementById(targetTab).style.display = 'block';
+            const activePanel = document.getElementById(targetTab);
+            if (activePanel) activePanel.classList.add('active');
             
             if (targetTab === 'tab-history' && historyMap) {
                 setTimeout(() => historyMap.invalidateSize(), 150);
@@ -290,11 +336,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show Details Modal function
     function openLocationDetails(loc) {
-        // Reset tabs to General Tab
         tabBtns.forEach(b => b.classList.remove('active'));
-        tabPanels.forEach(p => p.style.display = 'none');
+        tabPanels.forEach(p => p.classList.remove('active'));
         tabBtns[0].classList.add('active');
-        document.getElementById('tab-general').style.display = 'block';
+        document.getElementById('tab-general').classList.add('active');
 
         document.getElementById('det-label').textContent = loc.label;
         document.getElementById('det-ip').textContent = loc.ip_address;
@@ -309,25 +354,25 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('copy-coords-btn').onclick = function() {
             if (loc.location_denied) {
                 navigator.clipboard.writeText('Location Access Denied');
-                showToast('Copied!', 'Location access denial copied.', 'info');
+                showToast('Location access denial copied.', 'info');
             } else {
                 const lat = loc.latitude;
                 const lng = loc.longitude;
                 navigator.clipboard.writeText(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-                showToast('Copied!', 'Coordinates copied to clipboard.', 'info');
+                showToast('Coordinates copied to clipboard.', 'info');
             }
         };
 
         if (loc.location_denied) {
             document.getElementById('det-coords').textContent = 'Location Access Denied';
             document.getElementById('det-address').innerHTML = '<span class="location-denied-badge">Location Denied by User</span>';
-            document.getElementById('modal-map').style.display = 'none';
+            document.getElementById('modal-map').parentNode.style.display = 'none';
         } else {
             const lat = loc.latitude;
             const lng = loc.longitude;
             document.getElementById('det-coords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             document.getElementById('det-address').textContent = loc.address || loc.city || 'Unknown Address';
-            document.getElementById('modal-map').style.display = 'block';
+            document.getElementById('modal-map').parentNode.style.display = 'block';
 
             // Render/reset Map in modal
             setTimeout(() => {
@@ -357,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Bind Copy IP
         document.getElementById('copy-ip-btn').onclick = function() {
             navigator.clipboard.writeText(loc.ip_address);
-            showToast('Copied!', 'IP Address copied to clipboard.', 'info');
+            showToast('IP Address copied to clipboard.', 'info');
         };
 
         detailModal.classList.add('open');
@@ -370,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const histSpeed = document.getElementById('hist-stat-speed');
         const timeline = document.getElementById('history-timeline');
 
-        timeline.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:10px;">Loading history path...</div>';
+        timeline.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem; padding:10px;">Loading history path...</div>';
 
         try {
             // Stats
@@ -378,14 +423,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (statsRes.ok) {
                 const stats = await statsRes.json();
                 
-                // Format distance
                 if (stats.total_distance >= 1000) {
                     histDistance.textContent = `${(stats.total_distance / 1000).toFixed(2)} km`;
                 } else {
                     histDistance.textContent = `${stats.total_distance.toFixed(0)} m`;
                 }
                 
-                // Format duration
                 const sec = stats.duration_seconds;
                 if (sec >= 3600) {
                     histDuration.textContent = `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
@@ -403,7 +446,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (pathRes.ok) {
                 const points = await pathRes.json();
                 
-                // Set up map
                 setTimeout(() => {
                     if (!historyMap) {
                         historyMap = L.map('history-map');
@@ -422,15 +464,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
 
                     if (latlngs.length > 0) {
-                        // Plot line
                         historyPolyline = L.polyline(latlngs, { color: '#6C63FF', weight: 4 }).addTo(historyMap);
+                        L.circleMarker(latlngs[0], { radius: 6, color: '#43e97b', fillColor: '#43e97b', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Start Point');
                         
-                        // Start point
-                        L.circleMarker(latlngs[0], { radius: 6, color: '#00e676', fillColor: '#00e676', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Start Point');
-                        
-                        // End/current point
                         if (latlngs.length > 1) {
-                            L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: '#ff1744', fillColor: '#ff1744', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Current Point');
+                            L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: '#ff4757', fillColor: '#ff4757', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Current Point');
                         }
 
                         historyMap.fitBounds(latlngs, { padding: [30, 30] });
@@ -441,9 +479,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Populate timeline
                 timeline.innerHTML = '';
                 if (points.length === 0) {
-                    timeline.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No positions recorded yet.</div>';
+                    timeline.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem; padding:10px;">No positions recorded yet.</div>';
                 } else {
-                    // Render list
                     points.forEach((pt, index) => {
                         const item = document.createElement('div');
                         let borderClass = '';
@@ -467,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch(e) {
             console.error("Failed loading session path details", e);
-            timeline.innerHTML = '<div style="color:var(--error-color); font-size:0.85rem; padding:10px;">Failed to load movement logs.</div>';
+            timeline.innerHTML = '<div style="color:var(--danger); font-size:0.85rem; padding:10px;">Failed to load movement logs.</div>';
         }
     }
 
@@ -507,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (hasNewEntry) {
-                    showToast('New Location Captured!', `${latestLabel}: captured from ${latestNewCity}!`, 'success');
+                    showToast(`${latestLabel}: captured from ${latestNewCity}!`, 'success');
                     playBeepSound();
                     flashTabTitle();
                 }
@@ -517,11 +554,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const locTable = document.getElementById('locations-table');
                 if (locations.length === 0) {
                     emptyState.classList.remove('hidden');
-                    locTable.classList.add('hidden');
+                    locTable.parentNode.style.display = 'none'; // hide responsive wrapper
                     locationsMobileCards.innerHTML = '';
                 } else {
                     emptyState.classList.add('hidden');
-                    locTable.classList.remove('hidden');
+                    locTable.parentNode.style.display = 'block';
 
                     locationsList.innerHTML = '';
                     locationsMobileCards.innerHTML = '';
@@ -530,7 +567,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (markersLayer) markersLayer.clearLayers();
 
                     locations.forEach((loc, index) => {
-                        // Determine if live pulsing badge is needed (update within last 60 seconds)
                         const entryTime = new Date(loc.timestamp.replace(/-/g, '/'));
                         const isRecent = Math.abs(new Date() - entryTime) < 60000;
                         const liveBadgeHtml = (isRecent && loc.session_id) ? `<span class="live-badge">Live</span>` : '';
@@ -584,20 +620,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Mobile card
                         const mCard = document.createElement('div');
                         mCard.className = 'mobile-card animate-fade';
+                        mCard.style.cssText = 'background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; cursor:pointer;';
                         mCard.innerHTML = `
-                            <div class="mobile-card-row">
-                                <span class="mobile-card-label">${dotHtml}${escapeHtml(loc.label)}${liveBadgeHtml}</span>
-                                <span class="mobile-card-time">${loc.timestamp}</span>
+                            <div class="mobile-card-row" style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="mobile-card-label" style="font-weight:700;">${dotHtml}${escapeHtml(loc.label)}${liveBadgeHtml}</span>
+                                <span class="mobile-card-time" style="font-size:0.75rem; color:var(--text-secondary);">${loc.timestamp.split(' ')[1]}</span>
                             </div>
-                            <div class="mobile-card-meta">
+                            <div class="mobile-card-meta" style="font-size:0.85rem;">
                                 <strong>City:</strong> ${loc.location_denied ? '<span class="text-muted">Denied</span>' : escapeHtml(loc.city || 'Unknown')}
                             </div>
-                            <div class="mobile-card-meta">
+                            <div class="mobile-card-meta" style="font-size:0.85rem;">
                                 <strong>IP Address:</strong> <code>${loc.ip_address}</code>
                             </div>
-                            <div class="mobile-card-actions">
-                                <button class="btn btn-outline btn-xs view-loc-btn" data-id="${loc.id}">View Details</button>
-                                <button class="btn btn-danger btn-xs delete-loc-btn" data-id="${loc.id}">Delete</button>
+                            <div class="mobile-card-actions" style="display:flex; gap:10px; margin-top:8px;">
+                                <button class="btn btn-outline btn-xs view-loc-btn" data-id="${loc.id}" style="flex:1;">Details</button>
+                                <button class="btn btn-danger btn-xs delete-loc-btn" data-id="${loc.id}" style="flex:1;">Delete</button>
                             </div>
                         `;
 
@@ -636,6 +673,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
+                    // Trigger responsive card-to-table layouts
+                    if (window.innerWidth <= 768) {
+                        locTable.parentNode.style.display = 'none'; // hide table wrapper
+                        locationsMobileCards.style.display = 'flex'; // show mobile cards grid
+                    } else {
+                        locTable.parentNode.style.display = 'block';
+                        locationsMobileCards.style.display = 'none';
+                    }
+
                     // Auto zoom
                     if (map && mapPoints.length > 0 && isFirstLoad) {
                         map.fitBounds(mapPoints, { padding: [40, 40], maxZoom: 15 });
@@ -659,7 +705,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const id = this.getAttribute('data-id');
                             const delRes = await fetch(`/api/locations/${id}`, { method: 'DELETE' });
                             if (delRes.ok) {
-                                showToast('Entry Deleted', 'Location entry has been deleted.', 'error');
+                                showToast('Location entry has been deleted.', 'error');
                                 resetCountdown();
                                 loadData();
                             }
@@ -693,7 +739,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="slider"></span>
                             </label>
                         </td>
-                        <td><input type="text" class="link-url-input" value="${fullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-muted); cursor:pointer;" onclick="this.select()"></td>
+                        <td><input type="text" class="link-url-input" value="${fullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-secondary); cursor:pointer;" onclick="this.select()"></td>
                         <td>
                             <div class="action-buttons">
                                 <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}">Copy</button>
@@ -708,29 +754,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Mobile card
                     const mCard = document.createElement('div');
                     mCard.className = 'mobile-card animate-fade';
+                    mCard.style.cssText = 'background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px;';
                     mCard.innerHTML = `
-                        <div class="mobile-card-row">
+                        <div class="mobile-card-row" style="display:flex; justify-content:space-between; align-items:center;">
                             <strong>${escapeHtml(link.label)}</strong>
                             <span class="visits-badge">${link.visit_count} visits</span>
                         </div>
-                        <div class="mobile-card-meta">
+                        <div class="mobile-card-meta" style="font-size:0.85rem;">
                             <strong>Created:</strong> ${link.created_at}
                         </div>
-                        <div class="mobile-card-meta" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="mobile-card-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
                             <strong>Active State:</strong>
                             <label class="switch">
                                 <input type="checkbox" class="toggle-link-status" data-id="${link.link_id}" ${link.is_active ? 'checked' : ''}>
                                 <span class="slider"></span>
                             </label>
                         </div>
-                        <div class="mobile-card-actions">
-                            <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}">Copy</button>
-                            <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${fullUrl}">Show QR</button>
-                            <button class="btn btn-danger btn-xs delete-link-btn" data-id="${link.link_id}">Delete</button>
+                        <div class="mobile-card-actions" style="display:flex; gap:10px; margin-top:8px;">
+                            <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}" style="flex:1;">Copy</button>
+                            <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${fullUrl}" style="flex:1;">Show QR</button>
+                            <button class="btn btn-danger btn-xs delete-link-btn" data-id="${link.link_id}" style="flex:1;">Delete</button>
                         </div>
                     `;
                     linksMobileCards.appendChild(mCard);
                 });
+
+                if (window.innerWidth <= 768) {
+                    document.getElementById('links-table').parentNode.style.display = 'none';
+                    linksMobileCards.style.display = 'flex';
+                } else {
+                    document.getElementById('links-table').parentNode.style.display = 'block';
+                    linksMobileCards.style.display = 'none';
+                }
 
                 // Toggles and status binds
                 document.querySelectorAll('.toggle-link-status').forEach(checkbox => {
@@ -742,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_active })
                         });
-                        showToast('Link Status Updated', `Link is now ${is_active ? 'active' : 'inactive'}.`, 'info');
+                        showToast(`Link is now ${is_active ? 'active' : 'inactive'}.`, 'info');
                         resetCountdown();
                         loadData();
                     });
@@ -752,10 +807,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     btn.addEventListener('click', function() {
                         const url = this.getAttribute('data-url');
                         navigator.clipboard.writeText(url);
-                        showToast('Link Copied', 'Campaign tracking link copied to clipboard.', 'info');
-                        const origText = this.textContent;
-                        this.textContent = 'Copied!';
-                        setTimeout(() => this.textContent = origText, 1500);
+                        showToast('Campaign tracking link copied.', 'info');
                     });
                 });
 
@@ -773,7 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const linkId = this.getAttribute('data-id');
                             const delRes = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
                             if (delRes.ok) {
-                                showToast('Campaign Deleted', 'Campaign and all captured locations removed.', 'error');
+                                showToast('Campaign and captured locations removed.', 'error');
                                 resetCountdown();
                                 loadData();
                             }
@@ -850,11 +902,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const pattern = /^[a-zA-Z0-9\-]+$/;
             if (!pattern.test(slug) || slug.length > 30) {
-                slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Invalid format</span>';
+                slugStatusIndicator.innerHTML = '<span style="color:var(--danger); font-weight:bold;">❌ Invalid</span>';
                 return;
             }
 
-            slugStatusIndicator.innerHTML = '<span style="color:var(--text-muted);">Checking...</span>';
+            slugStatusIndicator.innerHTML = '<span style="color:var(--text-secondary);">Checking...</span>';
 
             slugCheckTimeout = setTimeout(async () => {
                 try {
@@ -862,12 +914,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (res.ok) {
                         const data = await res.json();
                         if (data.available) {
-                            slugStatusIndicator.innerHTML = '<span style="color:var(--success-color); font-weight:bold;">✔ Available</span>';
+                            slugStatusIndicator.innerHTML = '<span style="color:var(--success); font-weight:bold;">✔ OK</span>';
                         } else {
-                            slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Taken</span>';
+                            slugStatusIndicator.innerHTML = '<span style="color:var(--danger); font-weight:bold;">❌ Taken</span>';
                         }
                     } else {
-                        slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Error</span>';
+                        slugStatusIndicator.innerHTML = '<span style="color:var(--danger); font-weight:bold;">❌ Error</span>';
                     }
                 } catch (e) {
                     slugStatusIndicator.innerHTML = '';
@@ -892,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const custom_slug = customSlugInput ? customSlugInput.value.trim() : '';
 
             if (!label) {
-                showToast('Validation Error', 'Please enter a campaign label.', 'error');
+                showToast('Please enter a campaign label.', 'error');
                 return;
             }
 
@@ -945,13 +997,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (slugStatusIndicator) slugStatusIndicator.innerHTML = '';
                 updateLinkPreview();
                 
-                showToast('Link Generated', 'New secure tracking link created successfully!', 'success');
+                showToast('New secure tracking link created successfully!', 'success');
                 
                 resetCountdown();
                 loadData();
             } else {
                 const errData = await genRes.json().catch(() => ({}));
-                showToast('Server Error', errData.error || 'Failed to generate tracking link.', 'error');
+                showToast(errData.error || 'Failed to generate tracking link.', 'error');
             }
         });
     }
@@ -960,10 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
         copyLinkBtn.addEventListener('click', function() {
             resultLinkUrl.select();
             navigator.clipboard.writeText(resultLinkUrl.value);
-            showToast('Copied!', 'Generated campaign link copied.', 'info');
-            const origText = this.textContent;
-            this.textContent = 'Copied!';
-            setTimeout(() => this.textContent = origText, 1500);
+            showToast('Generated campaign link copied.', 'info');
         });
     }
 
@@ -977,53 +1026,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 const empty = document.getElementById('live-sessions-empty');
                 const countBadge = document.getElementById('live-devices-count');
 
-                countBadge.textContent = `${sessions.length} Device(s) Active`;
+                if (countBadge) countBadge.textContent = `${sessions.length} Device(s) Active`;
 
                 if (sessions.length === 0) {
-                    empty.classList.remove('hidden');
-                    list.innerHTML = '';
+                    if (empty) empty.classList.remove('hidden');
+                    if (list) list.innerHTML = '';
                 } else {
-                    empty.classList.add('hidden');
-                    list.innerHTML = '';
+                    if (empty) empty.classList.add('hidden');
+                    if (list) {
+                        list.innerHTML = '';
 
-                    sessions.forEach(sess => {
-                        const card = document.createElement('div');
-                        card.className = 'live-device-card animate-fade';
-                        
-                        const batteryStr = sess.battery_level !== null ? `${Math.round(sess.battery_level * 100)}%` : 'N/A';
-                        const shortSessionId = sess.session_id.substring(0, 8);
+                        sessions.forEach(sess => {
+                            const card = document.createElement('div');
+                            card.className = 'live-device-card animate-fade';
+                            
+                            const batteryStr = sess.battery_level !== null ? `${Math.round(sess.battery_level * 100)}%` : 'N/A';
+                            const shortSessionId = sess.session_id.substring(0, 8);
 
-                        card.innerHTML = `
-                            <div class="live-device-header">
-                                <span class="live-device-label">${escapeHtml(sess.label)}</span>
-                                <span class="live-device-id">${shortSessionId}...</span>
-                            </div>
-                            <div class="live-device-details">
-                                <div class="live-device-detail-item">
-                                    <strong>Last seen:</strong>
-                                    <span class="live-device-detail-value">${sess.timestamp.split(' ')[1]}</span>
+                            card.innerHTML = `
+                                <div class="live-device-header">
+                                    <span class="live-device-label">${escapeHtml(sess.label)}</span>
+                                    <span class="live-device-id">${shortSessionId}...</span>
                                 </div>
-                                <div class="live-device-detail-item">
-                                    <strong>City:</strong>
-                                    <span class="live-device-detail-value">${escapeHtml(sess.city)}</span>
+                                <div class="live-device-details">
+                                    <div class="live-device-detail-item">
+                                        <strong>Last seen:</strong>
+                                        <span class="live-device-detail-value">${sess.timestamp.split(' ')[1]}</span>
+                                    </div>
+                                    <div class="live-device-detail-item">
+                                        <strong>City:</strong>
+                                        <span class="live-device-detail-value">${escapeHtml(sess.city)}</span>
+                                    </div>
+                                    <div class="live-device-detail-item">
+                                        <strong>Battery:</strong>
+                                        <span class="live-device-detail-value">${batteryStr}</span>
+                                    </div>
+                                    <div class="live-device-detail-item">
+                                        <strong>Platform:</strong>
+                                        <span class="live-device-detail-value" style="font-size:0.75rem;">${sess.platform}</span>
+                                    </div>
                                 </div>
-                                <div class="live-device-detail-item">
-                                    <strong>Battery:</strong>
-                                    <span class="live-device-detail-value">${batteryStr}</span>
-                                </div>
-                                <div class="live-device-detail-item">
-                                    <strong>Platform:</strong>
-                                    <span class="live-device-detail-value" style="font-size:0.75rem;">${sess.platform}</span>
-                                </div>
-                            </div>
-                        `;
+                            `;
 
-                        card.addEventListener('click', () => {
-                            openLiveTrackingMapModal(sess.session_id);
+                            card.addEventListener('click', () => {
+                                openLiveTrackingMapModal(sess.session_id);
+                            });
+
+                            list.appendChild(card);
                         });
-
-                        list.appendChild(card);
-                    });
+                    }
                 }
             }
         } catch(e) {
@@ -1036,7 +1087,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('live-map-session-id').textContent = sessionId.substring(0, 16) + '...';
         liveMapModal.classList.add('open');
 
-        // Setup Leaflet map for live movement
         setTimeout(() => {
             if (!liveTrackingMap) {
                 liveTrackingMap = L.map('live-tracking-map');
@@ -1051,7 +1101,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateLiveTrackingMap(sessionId);
             
-            // Poll map updates every 5 seconds
             if (liveTrackingInterval) clearInterval(liveTrackingInterval);
             liveTrackingInterval = setInterval(() => {
                 updateLiveTrackingMap(sessionId);
@@ -1060,10 +1109,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
     }
 
-    // Updates coordinates, polyline, pulsing markers, and stats
     async function updateLiveTrackingMap(sessionId) {
         try {
-            // Stats
             const statsRes = await fetch(`/api/session/${sessionId}/stats`);
             let durationStr = '0s';
             let distanceStr = '0 m';
@@ -1087,7 +1134,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     durationStr = `${sec}s`;
                 }
 
-                // Speed
                 speedStr = `${stats.avg_speed_kmh.toFixed(1)} km/h`;
             }
 
@@ -1095,7 +1141,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('live-map-duration').textContent = durationStr;
             document.getElementById('live-map-speed').textContent = speedStr;
 
-            // Fetch coordinates
             const pathRes = await fetch(`/api/live/path/${sessionId}`);
             if (pathRes.ok) {
                 const points = await pathRes.json();
@@ -1110,13 +1155,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (latlngs.length > 0) {
-                    // Polyline
                     liveTrackingPolyline = L.polyline(latlngs, { color: '#6C63FF', weight: 4 }).addTo(liveTrackingMap);
+                    L.circleMarker(latlngs[0], { radius: 6, color: '#43e97b', fillColor: '#43e97b', fillOpacity: 1 }).addTo(liveTrackingMarkersGroup).bindPopup('Start Position');
 
-                    // Start marker
-                    L.circleMarker(latlngs[0], { radius: 6, color: '#00e676', fillColor: '#00e676', fillOpacity: 1 }).addTo(liveTrackingMarkersGroup).bindPopup('Start Position');
-
-                    // Current pulsing marker
                     const currentPos = latlngs[latlngs.length - 1];
                     const pulsingIcon = L.divIcon({
                         className: 'pulsing-marker-icon',
@@ -1124,11 +1165,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
 
                     L.marker(currentPos, { icon: pulsingIcon }).addTo(liveTrackingMarkersGroup).bindPopup('Current Location');
-
-                    // Auto pans to latest position
                     liveTrackingMap.setView(currentPos, Math.max(liveTrackingMap.getZoom(), 15));
 
-                    // Battery
                     const lastPt = points[points.length - 1];
                     const batteryStr = lastPt.battery_level !== null ? `${Math.round(lastPt.battery_level * 100)}%` : 'N/A';
                     document.getElementById('live-map-battery').textContent = batteryStr;
@@ -1160,12 +1198,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // If new unread alert comes in
                 if (unreadCount > lastUnreadAlertCount) {
-                    // Trigger sound & flashes
                     playBeepSound();
                     flashTabTitle();
-                    showToast('GEOFENCE BREACH!', 'A device entered or exited a geofence zone.', 'error');
+                    showToast('A device triggered a geofence zone boundary!', 'error');
                     
-                    // Show banner
                     const latestAlert = alerts.find(a => !a.is_read);
                     if (latestAlert) {
                         const typeText = latestAlert.alert_type === 'ENTER' ? 'ENTERED' : 'EXITED';
@@ -1175,54 +1211,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 lastUnreadAlertCount = unreadCount;
 
-                // Render dashboard list
                 const list = document.getElementById('geofence-alerts-list');
                 const empty = document.getElementById('geofence-alerts-empty');
 
                 if (alerts.length === 0) {
-                    empty.classList.remove('hidden');
-                    list.innerHTML = '';
+                    if (empty) empty.classList.remove('hidden');
+                    if (list) list.innerHTML = '';
                 } else {
-                    empty.classList.add('hidden');
-                    list.innerHTML = '';
+                    if (empty) empty.classList.add('hidden');
+                    if (list) {
+                        list.innerHTML = '';
 
-                    alerts.slice(0, 10).forEach(alert => {
-                        const item = document.createElement('div');
-                        const unreadClass = alert.is_read ? '' : 'unread';
-                        const badgeClass = alert.alert_type === 'ENTER' ? 'enter' : 'exit';
-                        const badgeText = alert.alert_type === 'ENTER' ? 'Entered' : 'Exited';
-                        const markReadBtn = alert.is_read 
-                            ? '' 
-                            : `<button class="btn btn-secondary btn-xs read-alert-btn" data-id="${alert.id}">Mark as Read</button>`;
+                        alerts.slice(0, 10).forEach(alert => {
+                            const item = document.createElement('div');
+                            const unreadClass = alert.is_read ? '' : 'unread';
+                            const badgeClass = alert.alert_type === 'ENTER' ? 'enter' : 'exit';
+                            const badgeText = alert.alert_type === 'ENTER' ? 'Entered' : 'Exited';
+                            const markReadBtn = alert.is_read 
+                                ? '' 
+                                : `<button class="btn btn-secondary btn-xs read-alert-btn" data-id="${alert.id}">Mark as Read</button>`;
 
-                        item.className = `geofence-alert-item ${unreadClass}`;
-                        item.innerHTML = `
-                            <div class="geofence-alert-header">
-                                <span class="alert-badge ${badgeClass}">${badgeText}</span>
-                                <span class="geofence-alert-info">Zone: <b>${escapeHtml(alert.geofence_name)}</b></span>
-                            </div>
-                            <div class="geofence-alert-info" style="font-size:0.8rem; margin-top:2px;">
-                                Session ID: <code style="color:var(--primary-color);">${alert.session_id.substring(0, 12)}...</code>
-                            </div>
-                            <div class="geofence-alert-meta">
-                                <span>${alert.timestamp}</span>
-                                ${markReadBtn}
-                            </div>
-                        `;
-                        list.appendChild(item);
-                    });
-
-                    // Bind mark read buttons
-                    document.querySelectorAll('.read-alert-btn').forEach(btn => {
-                        btn.addEventListener('click', async function(e) {
-                            e.stopPropagation();
-                            const id = this.getAttribute('data-id');
-                            const readRes = await fetch(`/api/geofence-alerts/${id}/read`, { method: 'POST' });
-                            if (readRes.ok) {
-                                loadGeofenceAlerts();
-                            }
+                            item.className = `geofence-alert-item ${unreadClass}`;
+                            item.innerHTML = `
+                                <div class="geofence-alert-header">
+                                    <span class="alert-badge ${badgeClass}">${badgeText}</span>
+                                    <span class="geofence-alert-info">Zone: <b>${escapeHtml(alert.geofence_name)}</b></span>
+                                </div>
+                                <div class="geofence-alert-info" style="font-size:0.8rem; margin-top:2px;">
+                                    Session ID: <code style="color:var(--accent);">${alert.session_id.substring(0, 12)}...</code>
+                                </div>
+                                <div class="geofence-alert-meta">
+                                    <span>${alert.timestamp}</span>
+                                    ${markReadBtn}
+                                </div>
+                            `;
+                            list.appendChild(item);
                         });
-                    });
+
+                        document.querySelectorAll('.read-alert-btn').forEach(btn => {
+                            btn.addEventListener('click', async function(e) {
+                                e.stopPropagation();
+                                const id = this.getAttribute('data-id');
+                                const readRes = await fetch(`/api/geofence-alerts/${id}/read`, { method: 'POST' });
+                                if (readRes.ok) {
+                                    loadGeofenceAlerts();
+                                }
+                            });
+                        });
+                    }
                 }
             }
         } catch(e) {
@@ -1230,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Close alert banner button
     const closeAlertBannerBtn = document.getElementById('close-alert-banner-btn');
     if (closeAlertBannerBtn) {
         closeAlertBannerBtn.addEventListener('click', () => {
@@ -1245,7 +1280,8 @@ document.addEventListener('DOMContentLoaded', function() {
             countdownVal++;
 
             const updateText = `Last updated: ${secondsSinceUpdate === 0 ? 'just now' : secondsSinceUpdate + 's ago'}`;
-            document.getElementById('last-updated-text').textContent = updateText;
+            const lastUpdatedText = document.getElementById('last-updated-text');
+            if (lastUpdatedText) lastUpdatedText.textContent = updateText;
             
             const locLastUpdated = document.getElementById('loc-last-updated');
             if (locLastUpdated) {
@@ -1256,12 +1292,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const mobileTimer = document.getElementById('mobile-refresh-countdown');
             const remaining = Math.max(0, 15 - countdownVal);
             
-            countdownTimer.textContent = `${remaining}s`;
+            if (countdownTimer) countdownTimer.textContent = `${remaining}s`;
             if (mobileTimer) {
                 mobileTimer.textContent = `${remaining}s`;
             }
 
-            // Sync polling checks (every 15s)
             if (countdownVal >= 15) {
                 countdownVal = 0;
                 secondsSinceUpdate = 0;
@@ -1277,6 +1312,31 @@ document.addEventListener('DOMContentLoaded', function() {
         secondsSinceUpdate = 0;
     }
 
+    // Responsive view handling on resize
+    window.addEventListener('resize', () => {
+        const locationsTable = document.getElementById('locations-table');
+        if (locationsTable) {
+            if (window.innerWidth <= 768) {
+                locationsTable.parentNode.style.display = 'none';
+                locationsMobileCards.style.display = 'flex';
+            } else {
+                locationsTable.parentNode.style.display = 'block';
+                locationsMobileCards.style.display = 'none';
+            }
+        }
+        
+        const linksTable = document.getElementById('links-table');
+        if (linksTable) {
+            if (window.innerWidth <= 768) {
+                linksTable.parentNode.style.display = 'none';
+                linksMobileCards.style.display = 'flex';
+            } else {
+                linksTable.parentNode.style.display = 'block';
+                linksMobileCards.style.display = 'none';
+            }
+        }
+    });
+
     // Initializations
     initMap();
     loadData();
@@ -1284,4 +1344,5 @@ document.addEventListener('DOMContentLoaded', function() {
     loadGeofenceAlerts();
     updateLinkPreview();
     startTimer();
+    handleHashNav();
 });

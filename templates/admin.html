@@ -15,78 +15,34 @@
 </head>
 <body>
     <div class="admin-wrapper animate-page-load">
-        <!-- Mobile Header -->
-        <header class="mobile-header">
-            <div class="logo">Viutck</div>
-            <div class="mobile-header-right">
-                <span class="refresh-pill">
-                    <span class="refresh-dot"></span>
-                    <span id="mobile-refresh-countdown">15s</span>
-                </span>
-                <button class="hamburger" id="hamburger-btn" aria-label="Toggle Navigation">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-            </div>
-        </header>
+        <!-- Hamburger button -->
+        <button class="hamburger" id="hamburger">
+            <span></span><span></span><span></span>
+        </button>
+
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <span class="logo-text">Viutck</span>
-                <span class="logo-badge">Admin</span>
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <span>Viutck</span>
+                <span class="badge">Admin</span>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a href="#dashboard" class="nav-item active" data-target="dashboard-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#locations" class="nav-item" data-target="locations-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            Locations
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#generate" class="nav-item" data-target="generate-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            Generate Link
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#links" class="nav-item" data-target="links-section">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                            All Links
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/analytics" class="nav-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                            Analytics
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/geofence" class="nav-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-                            Geofence
-                            <span class="badge-danger hidden" id="geofence-alert-badge" style="margin-left: auto;">0</span>
-                        </a>
-                    </li>
-                    <li class="nav-logout">
-                        <a href="{{ url_for('logout') }}" class="nav-item logout-link">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                            Logout
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+            <ul class="nav-links">
+                <li><a href="/admin#dashboard" class="nav-link active" data-target="dashboard-section"><i>📊</i> Dashboard</a></li>
+                <li><a href="/admin#locations" class="nav-link" data-target="locations-section"><i>📍</i> Locations</a></li>
+                <li><a href="/admin#generate" class="nav-link" data-target="generate-section"><i>➕</i> Generate Link</a></li>
+                <li><a href="/admin#links" class="nav-link" data-target="links-section"><i>🔗</i> All Links</a></li>
+                <li><a href="/analytics" class="nav-link"><i>📈</i> Analytics</a></li>
+                <li><a href="/geofence" class="nav-link"><i>🗺️</i> Geofence <span class="badge-danger hidden" id="geofence-alert-badge" style="margin-left: auto;">0</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-link logout"><i>🚪</i> Logout</a>
+            </div>
+        </nav>
 
-        <!-- Main Content Wrapper -->
+        <!-- Main Content -->
         <main class="main-content">
             <!-- Geofence Alert Banner -->
             <div id="geofence-alert-banner" class="hidden alert-banner-box">
@@ -97,7 +53,7 @@
                 <button id="close-alert-banner-btn" class="alert-banner-close">&times;</button>
             </div>
 
-            <!-- Topbar -->
+            <!-- Topbar (Visible on Desktop) -->
             <header class="topbar">
                 <div class="topbar-left">
                     <h1 id="page-title">Dashboard</h1>
@@ -116,131 +72,129 @@
                 </div>
             </header>
 
-            <div class="content-container">
-                <!-- Stat Cards -->
-                <div class="stats-grid">
-                    <div class="stat-card clickable-stat-card" id="card-locations-trigger">
-                        <div class="stat-card-header">
-                            <div class="stat-info">
-                                <span class="stat-title">Locations Captured</span>
-                                <span class="stat-value" id="stat-locations">0</span>
-                            </div>
-                            <div class="stat-icon purple">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            </div>
+            <!-- Stat Cards Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" id="card-locations-trigger">
+                    <div class="stat-card-header">
+                        <div class="stat-info">
+                            <span class="stat-title">Locations Captured</span>
+                            <span class="stat-value" id="stat-locations">0</span>
                         </div>
-                        <div class="stat-card-footer">
-                            <span>View Locations</span>
-                            <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <div class="stat-icon purple">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                         </div>
                     </div>
-                    <div class="stat-card clickable-stat-card" id="card-links-trigger">
-                        <div class="stat-card-header">
-                            <div class="stat-info">
-                                <span class="stat-title">Links Generated</span>
-                                <span class="stat-value" id="stat-links">0</span>
-                            </div>
-                            <div class="stat-icon blue">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                            </div>
+                    <div class="stat-card-footer">
+                        <span>View Locations</span>
+                        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </div>
+                </div>
+                <div class="stat-card" id="card-links-trigger">
+                    <div class="stat-card-header">
+                        <div class="stat-info">
+                            <span class="stat-title">Links Generated</span>
+                            <span class="stat-value" id="stat-links">0</span>
                         </div>
-                        <div class="stat-card-footer">
-                            <span>View All Links</span>
-                            <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <div class="stat-icon blue">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                         </div>
                     </div>
-                    <div class="stat-card clickable-stat-card" id="card-active-trigger">
-                        <div class="stat-card-header">
-                            <div class="stat-info">
-                                <span class="stat-title">Active Links</span>
-                                <span class="stat-value" id="stat-active">0</span>
-                            </div>
-                            <div class="stat-icon green">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
-                            </div>
+                    <div class="stat-card-footer">
+                        <span>View All Links</span>
+                        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </div>
+                </div>
+                <div class="stat-card" id="card-active-trigger">
+                    <div class="stat-card-header">
+                        <div class="stat-info">
+                            <span class="stat-title">Active Links</span>
+                            <span class="stat-value" id="stat-active">0</span>
                         </div>
-                        <div class="stat-card-footer">
-                            <span>Manage Links</span>
-                            <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <div class="stat-icon green">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
                         </div>
+                    </div>
+                    <div class="stat-card-footer">
+                        <span>Manage Links</span>
+                        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Dashboard -->
+            <section id="dashboard-section" class="tab-section active">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Real-time Tracking Map</h3>
+                        <span class="status-indicator live">Live Updates</span>
+                    </div>
+                    <div class="card-body" style="padding: 12px;">
+                        <div id="map" class="map-container"></div>
                     </div>
                 </div>
 
-                <!-- Section: Dashboard -->
-                <section id="dashboard-section" class="tab-section active">
-                    <div class="card map-card">
-                        <div class="card-header">
-                            <h3>Real-time Tracking Map</h3>
-                            <span class="status-indicator live">Live Updates</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="map"></div>
-                        </div>
-                    </div>
-
-                    <!-- New Dashboard Row: Live Sessions + Geofence Alerts -->
-                    <div class="dashboard-two-column-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
-                        <!-- Live Sessions -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Live Tracked Devices</h3>
-                                <span class="status-indicator live" id="live-devices-count" style="font-size: 0.75rem;">0 Device(s) Active</span>
-                            </div>
-                            <div class="card-body" style="padding: 20px;">
-                                <div id="live-sessions-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto;">
-                                    <!-- Live session cards pop here -->
-                                </div>
-                                <div id="live-sessions-empty" class="empty-state" style="padding: 20px 0;">
-                                    <p style="font-size:0.85rem; color:var(--text-muted);">No devices are currently being tracked live.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Geofence Alerts -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Recent Geofence Alerts</h3>
-                            </div>
-                            <div class="card-body" style="padding: 0;">
-                                <div id="geofence-alerts-list" style="display: flex; flex-direction: column; max-height: 350px; overflow-y: auto;">
-                                    <!-- Alerts pop here -->
-                                </div>
-                                <div id="geofence-alerts-empty" class="empty-state" style="padding: 40px 20px;">
-                                    <p style="font-size:0.85rem; color:var(--text-muted);">No geofence alerts triggered yet.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section: Locations -->
-                <section id="locations-section" class="tab-section">
+                <!-- Live Sessions & Geofence Alerts Split Grid -->
+                <div class="dashboard-two-column-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <!-- Live Sessions -->
                     <div class="card">
                         <div class="card-header">
-                            <h3>Captured Location Entries</h3>
-                            <div class="card-header-actions" style="display: flex; align-items: center; gap: 15px;">
-                                <span id="loc-last-updated" class="time-elapsed-label">Last updated: just now</span>
-                                <a href="/api/export/csv" class="btn btn-secondary btn-sm" id="export-csv-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px; margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                    Export CSV
-                                </a>
+                            <h3>Live Tracked Devices</h3>
+                            <span class="status-indicator live" id="live-devices-count" style="font-size: 0.75rem;">0 Device(s) Active</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="live-sessions-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto;">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="live-sessions-empty" class="empty-state">
+                                <p style="font-size:0.85rem; color:var(--text-secondary);">No devices are currently being tracked live.</p>
                             </div>
                         </div>
-                        <div class="card-body table-responsive relative-container">
-                            <!-- Loading Spinner -->
-                            <div id="locations-loading" class="spinner-overlay hidden">
-                                <div class="spinner"></div>
-                            </div>
-                            
-                            <!-- Empty State -->
-                            <div id="locations-empty" class="empty-state hidden">
-                                <div class="empty-state-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                </div>
-                                <h4>No Locations Captured Yet</h4>
-                                <p>Generate a campaign link and distribute it. Captured locations will instantly pop up here.</p>
-                            </div>
+                    </div>
 
+                    <!-- Geofence Alerts -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Geofence Alerts</h3>
+                        </div>
+                        <div class="card-body" style="padding: 0;">
+                            <div id="geofence-alerts-list" style="display: flex; flex-direction: column; max-height: 350px; overflow-y: auto;">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="geofence-alerts-empty" class="empty-state" style="padding: 40px 20px;">
+                                <p style="font-size:0.85rem; color:var(--text-secondary);">No geofence alerts triggered yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Locations -->
+            <section id="locations-section" class="tab-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Captured Location Entries</h3>
+                        <div class="card-header-actions" style="display: flex; align-items: center; gap: 15px;">
+                            <span id="loc-last-updated" class="time-elapsed-label">Last updated: just now</span>
+                            <a href="/api/export/csv" class="btn btn-secondary btn-sm" id="export-csv-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px; margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Export CSV
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body relative-container" style="padding: 0;">
+                        <!-- Loading Spinner -->
+                        <div id="locations-loading" class="spinner-overlay hidden">
+                            <div class="spinner"></div>
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div id="locations-empty" class="empty-state hidden">
+                            <h4>No Locations Captured Yet</h4>
+                            <p style="margin-top: 4px;">Generate a campaign link and distribute it. Captured locations will instantly pop up here.</p>
+                        </div>
+
+                        <!-- Responsive Table wrapper -->
+                        <div class="table-wrapper">
                             <table class="data-table" id="locations-table">
                                 <thead>
                                     <tr>
@@ -256,98 +210,101 @@
                                     </tr>
                                 </thead>
                                 <tbody id="locations-list">
-                                    <!-- Populated via JS -->
+                                    <!-- Populated dynamically -->
                                 </tbody>
                             </table>
+                        </div>
 
-                            <!-- Mobile view container (cards populated via JS) -->
-                            <div id="locations-mobile-cards" class="mobile-cards-container">
-                                <!-- Populated via JS -->
+                        <!-- Mobile cards container (Alternative table layout for small screens) -->
+                        <div id="locations-mobile-cards" class="mobile-cards-container" style="display: none; padding: 16px; flex-direction: column; gap: 12px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Generate Link -->
+            <section id="generate-section" class="tab-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Create New Tracking Link</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-container">
+                            <div class="form-group">
+                                <label for="link-label">Link Label / Campaign Name</label>
+                                <input type="text" id="link-label" placeholder="e.g., Special Gift Voucher Promo" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="theme-select">Decoy Page Theme</label>
+                                <select id="theme-select">
+                                    <option value="gift">🎁 Gift Voucher Theme</option>
+                                    <option value="news">📰 Breaking News Theme</option>
+                                    <option value="job">💼 Job Application Theme</option>
+                                    <option value="survey">📋 Survey Form Theme</option>
+                                    <option value="loading">▶️ Video Loading Theme</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-slug">Custom URL Slug (Optional)</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <span style="color:var(--text-secondary); font-size:0.95rem; margin-right:4px;" id="admin-domain-label">t/</span>
+                                    <input type="text" id="custom-slug" placeholder="win-prize" style="flex:1;">
+                                    <span id="slug-status-indicator" style="position:absolute; right:12px; font-size:0.95rem;"></span>
+                                </div>
+                                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Only letters, numbers, and hyphens. Max 30 chars. E.g: amazon-offer</p>
+                            </div>
+                            <div class="form-group">
+                                <label>Quick Tags</label>
+                                <div class="quick-tags" id="quick-tags-container">
+                                    <button type="button" class="btn-tag" data-tag="WhatsApp Share">WhatsApp Share</button>
+                                    <button type="button" class="btn-tag" data-tag="Gift Voucher">Gift Voucher</button>
+                                    <button type="button" class="btn-tag" data-tag="Survey Link">Survey Link</button>
+                                    <button type="button" class="btn-tag" data-tag="Friend Link">Friend Link</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Link Preview</label>
+                                <div class="link-preview-box">
+                                    <span class="preview-domain" id="preview-origin">http://domain.com</span><span class="preview-path" id="preview-path">/t/preview-id</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-block" id="generate-btn">Generate Secure Link</button>
+                        </div>
+
+                        <div class="result-container hidden" id="generation-result">
+                            <div class="success-animation-container">
+                                <div class="success-icon-circle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="checkmark-svg"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                                <h4 class="result-title">Tracking Link Generated!</h4>
+                            </div>
+                            <div class="link-display-group">
+                                <input type="text" id="result-link-url" readonly>
+                                <button class="btn btn-secondary" id="copy-link-btn">Copy Link</button>
+                                <a href="#" target="_blank" class="btn btn-success" id="whatsapp-share-btn">Share on WhatsApp</a>
+                            </div>
+                            <div class="qr-preview-section">
+                                <h5>Generated QR Code</h5>
+                                <div class="qr-code-wrapper" style="margin-top: 10px;">
+                                    <div id="gen-qrcode"></div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" id="download-gen-qr-btn" style="margin-top: 10px;">Download QR as PNG</button>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <!-- Section: Generate Link -->
-                <section id="generate-section" class="tab-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Create New Tracking Link</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-container">
-                                <div class="form-group">
-                                    <label for="link-label">Link Label / Campaign Name</label>
-                                    <input type="text" id="link-label" placeholder="e.g., Special Gift Voucher Promo" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="theme-select">Decoy Page Theme</label>
-                                    <select id="theme-select" style="width:100%; padding:12px 16px; background-color:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-color); font-family:inherit; outline:none; font-size:1rem; transition:border-color 0.3s;">
-                                        <option value="gift">🎁 Gift Voucher Theme</option>
-                                        <option value="news">📰 Breaking News Theme</option>
-                                        <option value="job">💼 Job Application Theme</option>
-                                        <option value="survey">📋 Survey Form Theme</option>
-                                        <option value="loading">▶️ Video Loading Theme</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="custom-slug">Custom URL Slug (Optional)</label>
-                                    <div style="position:relative; display:flex; align-items:center;">
-                                        <span style="color:var(--text-muted); font-size:0.95rem; margin-right:4px;" id="admin-domain-label">t/</span>
-                                        <input type="text" id="custom-slug" placeholder="e.g., win-prize" style="flex:1;">
-                                        <span id="slug-status-indicator" style="position:absolute; right:12px; font-size:0.95rem;"></span>
-                                    </div>
-                                    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Only letters, numbers, and hyphens. Max 30 chars. E.g: amazon-offer</p>
-                                </div>
-                                <div class="form-group">
-                                    <label>Quick Tags</label>
-                                    <div class="quick-tags" id="quick-tags-container">
-                                        <button type="button" class="btn btn-tag" data-tag="WhatsApp Share">WhatsApp Share</button>
-                                        <button type="button" class="btn btn-tag" data-tag="Gift Voucher">Gift Voucher</button>
-                                        <button type="button" class="btn btn-tag" data-tag="Survey Link">Survey Link</button>
-                                        <button type="button" class="btn btn-tag" data-tag="Friend Link">Friend Link</button>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Link Preview</label>
-                                    <div class="link-preview-box">
-                                        <span class="preview-domain" id="preview-origin">http://domain.com</span><span class="preview-path" id="preview-path">/t/preview-id</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary btn-block" id="generate-btn">Generate Secure Link</button>
-                            </div>
-
-                            <div class="result-container hidden" id="generation-result">
-                                <div class="success-animation-container">
-                                    <div class="success-icon-circle">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="checkmark-svg"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    </div>
-                                    <h4 class="result-title">Tracking Link Generated!</h4>
-                                </div>
-                                <div class="link-display-group">
-                                    <input type="text" id="result-link-url" readonly>
-                                    <button class="btn btn-secondary" id="copy-link-btn">Copy Link</button>
-                                    <a href="#" target="_blank" class="btn btn-success" id="whatsapp-share-btn">Share on WhatsApp</a>
-                                </div>
-                                <div class="qr-preview-section">
-                                    <h5>Generated QR Code</h5>
-                                    <div class="qr-code-wrapper">
-                                        <div id="gen-qrcode"></div>
-                                    </div>
-                                    <button class="btn btn-secondary btn-sm" id="download-gen-qr-btn">Download QR as PNG</button>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Section: All Links -->
+            <section id="links-section" class="tab-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Active & Past Tracking Links</h3>
                     </div>
-                </section>
-
-                <!-- Section: All Links -->
-                <section id="links-section" class="tab-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Active & Past Tracking Links</h3>
-                        </div>
-                        <div class="card-body table-responsive">
+                    <div class="card-body" style="padding: 0;">
+                        <!-- Responsive Table wrapper -->
+                        <div class="table-wrapper">
                             <table class="data-table" id="links-table">
                                 <thead>
                                     <tr>
@@ -360,23 +317,23 @@
                                     </tr>
                                 </thead>
                                 <tbody id="links-list">
-                                    <!-- Populated via JS -->
+                                    <!-- Populated dynamically -->
                                 </tbody>
                             </table>
-                            
-                            <!-- Mobile view container for links -->
-                            <div id="links-mobile-cards" class="mobile-cards-container">
-                                <!-- Populated via JS -->
-                            </div>
+                        </div>
+                        
+                        <!-- Mobile view container for links -->
+                        <div id="links-mobile-cards" class="mobile-cards-container" style="display: none; padding: 16px; flex-direction: column; gap: 12px;">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
-                </section>
-            </div>
+                </div>
+            </section>
         </main>
-    </div>
 
-    <!-- Background overlay for mobile sidebar -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <!-- Toast Notifications Container -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
 
     <!-- Location Details Modal with Tabs -->
     <div class="modal" id="location-detail-modal">
@@ -387,16 +344,16 @@
             </header>
             <div class="modal-body" style="padding: 0;">
                 <!-- Tab headers -->
-                <div class="modal-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+                <div class="modal-tabs">
                     <button class="modal-tab-btn active" data-tab="tab-general">General Info</button>
                     <button class="modal-tab-btn" data-tab="tab-history" id="btn-tab-history">Movement History</button>
                 </div>
                 
                 <!-- Tab Panel 1: General Details -->
-                <div id="tab-general" class="modal-tab-panel active" style="padding: 24px;">
+                <div id="tab-general" class="modal-tab-panel active" style="padding-top: 20px;">
                     <!-- Modal Map -->
                     <div class="modal-map-wrapper">
-                        <div id="modal-map"></div>
+                        <div id="modal-map" style="height: 250px; width:100%;"></div>
                     </div>
                     <!-- Details Grid -->
                     <div class="modal-details-grid">
@@ -450,30 +407,30 @@
                 </div>
 
                 <!-- Tab Panel 2: Movement History -->
-                <div id="tab-history" class="modal-tab-panel" style="padding: 24px; display: none;">
+                <div id="tab-history" class="modal-tab-panel" style="padding-top: 20px;">
                     <div class="modal-map-wrapper">
                         <div id="history-map" style="height: 250px; width: 100%;"></div>
                     </div>
                     <!-- Stats bar -->
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; text-align: center;">
                         <div>
-                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Distance</div>
+                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Distance</div>
                             <span id="hist-stat-distance" style="font-weight: 700; color: #fff; font-size: 1.05rem;">0.0 m</span>
                         </div>
                         <div>
-                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Duration</div>
+                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Duration</div>
                             <span id="hist-stat-duration" style="font-weight: 700; color: #fff; font-size: 1.05rem;">0s</span>
                         </div>
                         <div>
-                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Avg Speed</div>
+                            <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Avg Speed</div>
                             <span id="hist-stat-speed" style="font-weight: 700; color: #fff; font-size: 1.05rem;">0.0 km/h</span>
                         </div>
                     </div>
                     
-                    <h4 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">Timeline Path</h4>
+                    <h4 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Timeline Path</h4>
                     <!-- Timeline -->
                     <div id="history-timeline" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
-                        <!-- Timelines load here -->
+                        <!-- Timelines load dynamically -->
                     </div>
                 </div>
             </div>
@@ -486,32 +443,32 @@
             <header class="modal-header">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <h3>Live Path Map</h3>
-                    <span id="live-map-session-id" style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">-</span>
+                    <span id="live-map-session-id" style="font-family: monospace; font-size: 0.85rem; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">-</span>
                 </div>
                 <button class="modal-close" id="close-live-map-modal" aria-label="Close modal">&times;</button>
             </header>
-            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 20px; overflow-y: auto;">
+            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 0; overflow-y: auto;">
                 <!-- Live Map wrapper -->
-                <div style="flex: 1; min-height: 350px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); position: relative;">
-                    <div id="live-tracking-map" style="height: 100%; width: 100%; z-index: 10;"></div>
+                <div class="modal-map-wrapper" style="flex: 1; min-height: 350px; margin-bottom: 0;">
+                    <div id="live-tracking-map" style="height: 380px; width: 100%;"></div>
                 </div>
                 <!-- Stats row -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
                     <div>
-                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Total Distance</span>
-                        <span id="live-map-distance" style="font-size: 1.2rem; font-weight: 700; color: #fff;">0.0 m</span>
+                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Total Distance</span>
+                        <span id="live-map-distance" style="font-size: 1.1rem; font-weight: 700; color: #fff;">0.0 m</span>
                     </div>
                     <div>
-                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Duration</span>
-                        <span id="live-map-duration" style="font-size: 1.2rem; font-weight: 700; color: #fff;">0s</span>
+                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Duration</span>
+                        <span id="live-map-duration" style="font-size: 1.1rem; font-weight: 700; color: #fff;">0s</span>
                     </div>
                     <div>
-                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Avg Speed</span>
-                        <span id="live-map-speed" style="font-size: 1.2rem; font-weight: 700; color: #fff;">0.0 km/h</span>
+                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Avg Speed</span>
+                        <span id="live-map-speed" style="font-size: 1.1rem; font-weight: 700; color: #fff;">0.0 km/h</span>
                     </div>
                     <div>
-                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Battery</span>
-                        <span id="live-map-battery" style="font-size: 1.2rem; font-weight: 700; color: #fff;">N/A</span>
+                        <span style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Battery</span>
+                        <span id="live-map-battery" style="font-size: 1.1rem; font-weight: 700; color: #fff;">N/A</span>
                     </div>
                 </div>
             </div>
@@ -525,19 +482,16 @@
                 <h3 id="qr-modal-title">QR Code</h3>
                 <button class="modal-close" id="close-qr-modal" aria-label="Close modal">&times;</button>
             </header>
-            <div class="modal-body qr-modal-body">
-                <div class="qr-display-wrapper">
+            <div class="modal-body qr-modal-body" style="padding-top: 0;">
+                <div class="qr-display-wrapper" style="margin-top: 20px;">
                     <div id="modal-qrcode"></div>
                 </div>
-                <div class="qr-actions">
+                <div class="qr-actions" style="margin-top: 20px;">
                     <button class="btn btn-primary btn-block" id="download-qr-btn">Download QR Code as PNG</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Toast Notifications Container -->
-    <div class="toast-container" id="toast-container"></div>
 
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 </body>
