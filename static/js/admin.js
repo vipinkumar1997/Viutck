@@ -35,6 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let countdownVal = 0;
     let secondsSinceUpdate = 0;
     let updateTimer = null;
+
+    // Silent update caches (prevent visual redraw flashes)
+    let lastLocationsJson = null;
+    let lastSessionsJson = null;
+    let lastAlertsJson = null;
     
     // Modal maps
     let modalMap = null;
@@ -57,14 +62,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global Sidebar toggler logic
     if (hamburgerBtn) {
         hamburgerBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            sidebarOverlay.classList.toggle('active');
+            if (window.innerWidth > 768) {
+                document.body.classList.toggle('sidebar-collapsed');
+            } else {
+                document.body.classList.toggle('sidebar-open');
+            }
         });
     }
     if (sidebarOverlay) {
         sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            sidebarOverlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
         });
     }
 
@@ -72,8 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.sidebar .nav-link').forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 768) {
-                sidebar.classList.remove('open');
-                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
             }
         });
     });
@@ -511,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load Data function
     async function loadData() {
         const spinner = document.getElementById('locations-loading');
-        if (spinner) spinner.classList.remove('hidden');
+        if (isFirstLoad && spinner) spinner.classList.remove('hidden');
 
         try {
             // Fetch Statistics
@@ -530,6 +536,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (spinner) spinner.classList.add('hidden');
 
+                const currentLocationsJson = JSON.stringify(locations);
+                if (currentLocationsJson === lastLocationsJson && !isFirstLoad) {
+                    return;
+                }
+                lastLocationsJson = currentLocationsJson;
+
                 let hasNewEntry = false;
                 let latestNewCity = 'Unknown';
                 let latestLabel = '';
@@ -540,8 +552,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         latestNewCity = loc.city || 'Unknown City';
                         latestLabel = loc.label;
                     }
-                    loadedLocationIds.add(loc.id);
                 });
+
+                // Clear and rebuild loaded set
+                loadedLocationIds = new Set(locations.map(loc => loc.id));
 
                 if (hasNewEntry) {
                     showToast(`${latestLabel}: captured from ${latestNewCity}!`, 'success');
@@ -595,12 +609,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         row.innerHTML = `
                             <td>${index + 1}</td>
-                            <td>${dotHtml}<strong>${escapeHtml(loc.label)}</strong>${liveBadgeHtml}</td>
+                            <td>${dotHtml}<strong class="truncate-text" title="${escapeHtml(loc.label)}">${escapeHtml(loc.label)}</strong>${liveBadgeHtml}</td>
                             <td>${loc.timestamp}</td>
                             <td>${addressCellHtml}</td>
                             <td>${latLngCol}</td>
                             <td><code>${loc.ip_address}</code></td>
-                            <td><span style="font-size: 0.85rem;" title="${escapeHtml(loc.user_agent)}">${escapeHtml(browserInfo)}</span></td>
+                            <td><span class="truncate-text" style="font-size: 0.85rem;" title="${escapeHtml(loc.user_agent)}">${escapeHtml(browserInfo)}</span></td>
                             <td>${loc.accuracy ? loc.accuracy.toFixed(1) + ' m' : 'N/A'}</td>
                             <td>
                                 <div class="action-buttons">
@@ -730,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.className = 'animate-fade';
                     
                     row.innerHTML = `
-                        <td><strong>${escapeHtml(link.label)}</strong></td>
+                        <td><strong class="truncate-text" title="${escapeHtml(link.label)}">${escapeHtml(link.label)}</strong></td>
                         <td>${link.created_at}</td>
                         <td><span class="visits-badge">${link.visit_count}</span></td>
                         <td>
@@ -739,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="slider"></span>
                             </label>
                         </td>
-                        <td><input type="text" class="link-url-input" value="${fullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-secondary); cursor:pointer;" onclick="this.select()"></td>
+                        <td><div style="max-width: 15vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><input type="text" class="link-url-input" value="${fullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-secondary); cursor:pointer;" onclick="this.select()"></div></td>
                         <td>
                             <div class="action-buttons">
                                 <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}">Copy</button>
@@ -1022,6 +1036,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const res = await fetch('/api/live/sessions');
             if (res.ok) {
                 const sessions = await res.json();
+
+                const currentSessionsJson = JSON.stringify(sessions);
+                if (currentSessionsJson === lastSessionsJson) {
+                    return;
+                }
+                lastSessionsJson = currentSessionsJson;
+
                 const list = document.getElementById('live-sessions-list');
                 const empty = document.getElementById('live-sessions-empty');
                 const countBadge = document.getElementById('live-devices-count');
@@ -1183,6 +1204,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const res = await fetch('/api/geofence-alerts');
             if (res.ok) {
                 const alerts = await res.json();
+
+                const currentAlertsJson = JSON.stringify(alerts);
+                if (currentAlertsJson === lastAlertsJson) {
+                    return;
+                }
+                lastAlertsJson = currentAlertsJson;
+
                 const unreadCount = alerts.filter(a => !a.is_read).length;
                 
                 // Sidebar badge

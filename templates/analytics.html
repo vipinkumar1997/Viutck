@@ -312,14 +312,16 @@
             // Sidebar toggler
             if (hamburgerBtn) {
                 hamburgerBtn.addEventListener('click', function() {
-                    sidebar.classList.toggle('open');
-                    sidebarOverlay.classList.toggle('active');
+                    if (window.innerWidth > 768) {
+                        document.body.classList.toggle('sidebar-collapsed');
+                    } else {
+                        document.body.classList.toggle('sidebar-open');
+                    }
                 });
             }
             if (sidebarOverlay) {
                 sidebarOverlay.addEventListener('click', function() {
-                    sidebar.classList.remove('open');
-                    sidebarOverlay.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
                 });
             }
 
@@ -327,8 +329,7 @@
             document.querySelectorAll('.sidebar .nav-link').forEach(link => {
                 link.addEventListener('click', () => {
                     if (window.innerWidth <= 768) {
-                        sidebar.classList.remove('open');
-                        sidebarOverlay.classList.remove('active');
+                        document.body.classList.remove('sidebar-open');
                     }
                 });
             });
@@ -421,16 +422,16 @@
                             
                             tr.innerHTML = `
                                 <td>${fullLoc.timestamp}</td>
-                                <td><strong>${escapeHtml(fullLoc.label)}</strong></td>
+                                <td><strong class="truncate-text" title="${escapeHtml(fullLoc.label)}">${escapeHtml(fullLoc.label)}</strong></td>
                                 <td>${deviceType}</td>
                                 <td>${escapeHtml(browserVal)}</td>
                                 <td>${escapeHtml(fullLoc.platform || 'Unknown')}</td>
                                 <td><span style="font-size:0.85rem;">${escapeHtml(fullLoc.screen_resolution || 'Unknown')}</span></td>
-                                <td><span style="font-size:0.85rem;">${escapeHtml(fullLoc.timezone || 'Unknown')}</span></td>
+                                <td><span class="truncate-text" style="font-size:0.85rem;" title="${escapeHtml(fullLoc.timezone)}">${escapeHtml(fullLoc.timezone || 'Unknown')}</span></td>
                                 <td>${fullLoc.cpu_cores || 'N/A'}</td>
                                 <td>${fullLoc.device_memory ? fullLoc.device_memory + ' GB' : 'N/A'}</td>
                                 <td><span style="font-size:0.85rem;">${batteryStr}</span></td>
-                                <td><code style="font-size:0.75rem;">${fullLoc.canvas_fingerprint ? escapeHtml(fullLoc.canvas_fingerprint) : 'N/A'}</code></td>
+                                <td><code class="truncate-text" style="font-size:0.75rem;" title="${escapeHtml(fullLoc.canvas_fingerprint)}">${fullLoc.canvas_fingerprint ? escapeHtml(fullLoc.canvas_fingerprint) : 'N/A'}</code></td>
                                 <td>${fontCount}</td>
                                 <td><span class="visits-badge">${escapeHtml(fullLoc.connection_type || 'Unknown')}</span></td>
                             `;

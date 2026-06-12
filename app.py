@@ -3,11 +3,31 @@ import uuid
 import math
 import csv
 import io
+import threading
+import time
+import urllib.request
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, stream_with_context, Response
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+
+# Render free-tier keep-alive self-pinger task
+def keep_alive():
+    url = os.environ.get('RENDER_EXTERNAL_URL')
+    if not url:
+        return
+    ping_url = f"{url.rstrip('/')}/ping"
+    print(f"Self-pinger daemon started targeting: {ping_url}")
+    while True:
+        # Sleep for 10 minutes (600 seconds)
+        time.sleep(600)
+        try:
+            with urllib.request.urlopen(ping_url, timeout=15) as response:
+                response.read()
+            print("Self-ping successful. Render instance kept awake!")
+        except Exception as e:
+            print(f"Keep-alive self-ping failed: {e}")
 
 # Security configuration
 app.secret_key = os.environ.get('SECRET_KEY', 'changethis_to_random_string')
@@ -195,6 +215,10 @@ def check_geofences_for_entry(entry):
     return triggered
 
 # Routes
+@app.route('/ping')
+def ping():
+    return jsonify({'status': 'alive'}), 200
+
 @app.route('/')
 def index():
     return redirect(url_for('admin'))
@@ -931,6 +955,11 @@ with app.app_context():
         db.session.commit()
     except Exception:
         db.session.rollback()
+
+    # Start Render keep-awake daemon thread if deployed
+    if os.environ.get('RENDER_EXTERNAL_URL'):
+        pinger_thread = threading.Thread(target=keep_alive, daemon=True)
+        pinger_thread.start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

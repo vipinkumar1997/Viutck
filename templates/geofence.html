@@ -203,14 +203,16 @@
             
             if (hamburgerBtn) {
                 hamburgerBtn.addEventListener('click', function() {
-                    sidebar.classList.toggle('open');
-                    sidebarOverlay.classList.toggle('active');
+                    if (window.innerWidth > 768) {
+                        document.body.classList.toggle('sidebar-collapsed');
+                    } else {
+                        document.body.classList.toggle('sidebar-open');
+                    }
                 });
             }
             if (sidebarOverlay) {
                 sidebarOverlay.addEventListener('click', function() {
-                    sidebar.classList.remove('open');
-                    sidebarOverlay.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
                 });
             }
 
@@ -218,8 +220,7 @@
             document.querySelectorAll('.sidebar .nav-link').forEach(link => {
                 link.addEventListener('click', () => {
                     if (window.innerWidth <= 768) {
-                        sidebar.classList.remove('open');
-                        sidebarOverlay.classList.remove('active');
+                        document.body.classList.remove('sidebar-open');
                     }
                 });
             });

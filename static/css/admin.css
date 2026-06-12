@@ -71,7 +71,7 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Sidebar (desktop — always visible) */
+/* Sidebar (desktop) */
 .sidebar {
   position: fixed;
   left: 0;
@@ -85,6 +85,10 @@ body {
   z-index: 1000;
   transition: transform 0.3s ease;
   overflow-y: auto;
+}
+
+body.sidebar-collapsed .sidebar {
+  transform: translateX(-100%);
 }
 
 .sidebar-logo {
@@ -160,33 +164,17 @@ body {
   color: var(--danger);
 }
 
-/* Sidebar (mobile — hidden by default, slides in) */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  .sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 999;
-    backdrop-filter: blur(4px);
-  }
-  .sidebar-overlay.active {
-    display: block;
-  }
+/* Sidebar Overlay (Desktop default hidden) */
+.sidebar-overlay {
+  display: none;
 }
 
-/* Hamburger Button (visible only on mobile) */
+/* Hamburger Button (Universal) */
 .hamburger {
-  display: none;
+  display: flex;
   position: fixed;
   top: 16px;
-  left: 16px;
+  left: calc(var(--sidebar-width) + 16px);
   z-index: 1001;
   background: var(--accent);
   border: none;
@@ -198,6 +186,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  transition: left 0.3s ease, background-color 0.3s ease;
 }
 
 .hamburger span {
@@ -208,10 +197,8 @@ body {
   transition: var(--transition);
 }
 
-@media (max-width: 768px) {
-  .hamburger {
-    display: flex;
-  }
+body.sidebar-collapsed .hamburger {
+  left: 16px;
 }
 
 /* Main Content */
@@ -222,15 +209,12 @@ body {
   overflow-x: hidden;
   width: calc(100% - var(--sidebar-width));
   box-sizing: border-box;
+  transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-    padding: 16px;
-    padding-top: 70px;
-  }
+body.sidebar-collapsed .main-content {
+  margin-left: 0;
+  width: 100%;
 }
 
 /* Topbar Header (Desktop) */
@@ -239,9 +223,48 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 28px;
+  padding-left: 60px; /* Make room for the hamburger button */
+  transition: padding-left 0.3s ease;
 }
 
+/* Responsive Overrides (Mobile) */
 @media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%) !important;
+  }
+  
+  body.sidebar-open .sidebar {
+    transform: translateX(0) !important;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+    backdrop-filter: blur(4px);
+  }
+  
+  body.sidebar-open .sidebar-overlay {
+    display: block;
+  }
+  
+  .hamburger {
+    left: 16px !important;
+  }
+  
+  body.sidebar-open .hamburger {
+    left: calc(var(--sidebar-width) + 16px) !important;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 16px;
+    padding-top: 70px;
+  }
+  
   .topbar {
     display: none;
   }
@@ -595,7 +618,7 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
-.result-container.hidden {
+.result-container.hidden, .hidden {
   display: none !important;
 }
 
@@ -723,6 +746,7 @@ input:checked + .slider:before {
   padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   text-align: left;
+  white-space: nowrap;
 }
 
 .data-table th {
@@ -1132,12 +1156,23 @@ input:checked + .slider:before {
 }
 
 .truncate-address {
-  max-width: 220px;
+  max-width: clamp(150px, 20vw, 400px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: inline-block;
   vertical-align: middle;
+  transition: max-width 0.2s ease;
+}
+
+.truncate-text {
+  max-width: clamp(120px, 15vw, 300px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+  transition: max-width 0.2s ease;
 }
 
 .location-denied-badge {
