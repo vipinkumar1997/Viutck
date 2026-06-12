@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: location-tracker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: SECRET_KEY
+        value: changethis_to_random_string
+      - key: DATABASE_URL
+        fromDatabase:
+          name: location-tracker-db
+          property: connectionString
+
+databases:
+  - name: location-tracker-db
+    plan: free
