@@ -40,6 +40,20 @@ document.addEventListener('DOMContentLoaded', function() {
     let modalMap = null;
     let modalMarker = null;
 
+    // History map (modal tab)
+    let historyMap = null;
+    let historyPolyline = null;
+    let historyMarkersGroup = null;
+
+    // Live Map (fullscreen modal)
+    let liveTrackingMap = null;
+    let liveTrackingPolyline = null;
+    let liveTrackingMarkersGroup = null;
+    let liveTrackingInterval = null;
+
+    // Alert tracking
+    let lastUnreadAlertCount = 0;
+
     // Toast Notifications
     function showToast(title, message, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -96,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalTitle = document.title;
         let isAlert = false;
         flashInterval = setInterval(() => {
-            document.title = isAlert ? originalTitle : "🔴 New Location! | Viutck";
+            document.title = isAlert ? originalTitle : "🔴 ALERT! Geofence Breach";
             isAlert = !isAlert;
         }, 1000);
 
@@ -114,8 +128,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Nav and Tab switching
     navItems.forEach(item => {
         item.addEventListener('click', function(e) {
-            e.preventDefault();
             const targetId = this.getAttribute('data-target');
+            if (!targetId) return; // Allow normal link navigation (e.g. /geofence)
+            e.preventDefault();
             switchTab(targetId, this.textContent.trim());
         });
     });
@@ -223,6 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modal Manager
     const detailModal = document.getElementById('location-detail-modal');
     const qrModal = document.getElementById('qr-display-modal');
+    const liveMapModal = document.getElementById('live-map-modal');
 
     // Close buttons
     document.getElementById('close-detail-modal').addEventListener('click', () => {
@@ -231,24 +247,76 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('close-qr-modal').addEventListener('click', () => {
         qrModal.classList.remove('open');
     });
+    document.getElementById('close-live-map-modal').addEventListener('click', () => {
+        liveMapModal.classList.remove('open');
+        if (liveTrackingInterval) {
+            clearInterval(liveTrackingInterval);
+            liveTrackingInterval = null;
+        }
+    });
 
     // Close on click outside modal
     window.addEventListener('click', (e) => {
         if (e.target === detailModal) detailModal.classList.remove('open');
         if (e.target === qrModal) qrModal.classList.remove('open');
+        if (e.target === liveMapModal) {
+            liveMapModal.classList.remove('open');
+            if (liveTrackingInterval) {
+                clearInterval(liveTrackingInterval);
+                liveTrackingInterval = null;
+            }
+        }
+    });
+
+    // Details Modal Tab Switching
+    const tabBtns = document.querySelectorAll('.modal-tab-btn');
+    const tabPanels = document.querySelectorAll('.modal-tab-panel');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabPanels.forEach(p => p.style.display = 'none');
+            
+            this.classList.add('active');
+            const targetTab = this.getAttribute('data-tab');
+            document.getElementById(targetTab).style.display = 'block';
+            
+            if (targetTab === 'tab-history' && historyMap) {
+                setTimeout(() => historyMap.invalidateSize(), 150);
+            } else if (targetTab === 'tab-general' && modalMap) {
+                setTimeout(() => modalMap.invalidateSize(), 150);
+            }
+        });
     });
 
     // Show Details Modal function
     function openLocationDetails(loc) {
+        // Reset tabs to General Tab
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.style.display = 'none');
+        tabBtns[0].classList.add('active');
+        document.getElementById('tab-general').style.display = 'block';
+
         document.getElementById('det-label').textContent = loc.label;
         document.getElementById('det-ip').textContent = loc.ip_address;
-        document.getElementById('det-platform').textContent = loc.platform || 'Unknown';
         document.getElementById('det-resolution').textContent = loc.screen_resolution || 'Unknown';
         document.getElementById('det-language').textContent = loc.language || 'Unknown';
         document.getElementById('det-timestamp').textContent = loc.timestamp;
         document.getElementById('det-accuracy').textContent = loc.accuracy ? `${loc.accuracy.toFixed(1)} m` : 'N/A';
         document.getElementById('det-browser').textContent = parseUserAgent(loc.user_agent, loc.platform);
-        document.getElementById('det-os').textContent = loc.platform;
+        document.getElementById('det-os').textContent = loc.platform || 'Unknown';
+
+        // Bind Copy Coordinates safely
+        document.getElementById('copy-coords-btn').onclick = function() {
+            if (loc.location_denied) {
+                navigator.clipboard.writeText('Location Access Denied');
+                showToast('Copied!', 'Location access denial copied.', 'info');
+            } else {
+                const lat = loc.latitude;
+                const lng = loc.longitude;
+                navigator.clipboard.writeText(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+                showToast('Copied!', 'Coordinates copied to clipboard.', 'info');
+            }
+        };
 
         if (loc.location_denied) {
             document.getElementById('det-coords').textContent = 'Location Access Denied';
@@ -260,12 +328,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('det-coords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             document.getElementById('det-address').textContent = loc.address || loc.city || 'Unknown Address';
             document.getElementById('modal-map').style.display = 'block';
-
-            // Bind Copy Coordinates
-            document.getElementById('copy-coords-btn').onclick = function() {
-                navigator.clipboard.writeText(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-                showToast('Copied!', 'Coordinates copied to clipboard.', 'info');
-            };
 
             // Render/reset Map in modal
             setTimeout(() => {
@@ -283,6 +345,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 200);
         }
 
+        // Setup History tab logic
+        const btnTabHistory = document.getElementById('btn-tab-history');
+        if (loc.session_id) {
+            btnTabHistory.style.display = 'block';
+            loadSessionHistory(loc.session_id);
+        } else {
+            btnTabHistory.style.display = 'none';
+        }
+
         // Bind Copy IP
         document.getElementById('copy-ip-btn').onclick = function() {
             navigator.clipboard.writeText(loc.ip_address);
@@ -292,9 +363,116 @@ document.addEventListener('DOMContentLoaded', function() {
         detailModal.classList.add('open');
     }
 
+    // Load History Path & Stats for modal history tab
+    async function loadSessionHistory(sessionId) {
+        const histDistance = document.getElementById('hist-stat-distance');
+        const histDuration = document.getElementById('hist-stat-duration');
+        const histSpeed = document.getElementById('hist-stat-speed');
+        const timeline = document.getElementById('history-timeline');
+
+        timeline.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:10px;">Loading history path...</div>';
+
+        try {
+            // Stats
+            const statsRes = await fetch(`/api/session/${sessionId}/stats`);
+            if (statsRes.ok) {
+                const stats = await statsRes.json();
+                
+                // Format distance
+                if (stats.total_distance >= 1000) {
+                    histDistance.textContent = `${(stats.total_distance / 1000).toFixed(2)} km`;
+                } else {
+                    histDistance.textContent = `${stats.total_distance.toFixed(0)} m`;
+                }
+                
+                // Format duration
+                const sec = stats.duration_seconds;
+                if (sec >= 3600) {
+                    histDuration.textContent = `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+                } else if (sec >= 60) {
+                    histDuration.textContent = `${Math.floor(sec/60)}m ${sec%60}s`;
+                } else {
+                    histDuration.textContent = `${sec}s`;
+                }
+
+                histSpeed.textContent = `${stats.avg_speed_kmh.toFixed(1)} km/h`;
+            }
+
+            // Path points
+            const pathRes = await fetch(`/api/session/${sessionId}/path`);
+            if (pathRes.ok) {
+                const points = await pathRes.json();
+                
+                // Set up map
+                setTimeout(() => {
+                    if (!historyMap) {
+                        historyMap = L.map('history-map');
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                            attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                        }).addTo(historyMap);
+                        historyMarkersGroup = L.layerGroup().addTo(historyMap);
+                    } else {
+                        historyMarkersGroup.clearLayers();
+                        if (historyPolyline) historyMap.removeLayer(historyPolyline);
+                    }
+
+                    const latlngs = [];
+                    points.forEach(pt => {
+                        if (pt.latitude && pt.longitude) latlngs.push([pt.latitude, pt.longitude]);
+                    });
+
+                    if (latlngs.length > 0) {
+                        // Plot line
+                        historyPolyline = L.polyline(latlngs, { color: '#6C63FF', weight: 4 }).addTo(historyMap);
+                        
+                        // Start point
+                        L.circleMarker(latlngs[0], { radius: 6, color: '#00e676', fillColor: '#00e676', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Start Point');
+                        
+                        // End/current point
+                        if (latlngs.length > 1) {
+                            L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: '#ff1744', fillColor: '#ff1744', fillOpacity: 1 }).addTo(historyMarkersGroup).bindPopup('Current Point');
+                        }
+
+                        historyMap.fitBounds(latlngs, { padding: [30, 30] });
+                    }
+                    historyMap.invalidateSize();
+                }, 200);
+
+                // Populate timeline
+                timeline.innerHTML = '';
+                if (points.length === 0) {
+                    timeline.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No positions recorded yet.</div>';
+                } else {
+                    // Render list
+                    points.forEach((pt, index) => {
+                        const item = document.createElement('div');
+                        let borderClass = '';
+                        if (index === 0) borderClass = 'first';
+                        else if (index === points.length - 1) borderClass = 'last';
+
+                        const locationStr = pt.city || pt.address || 'Unknown coordinates';
+                        
+                        item.className = `timeline-item ${borderClass}`;
+                        item.innerHTML = `
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-time">${pt.timestamp}</div>
+                            <div class="timeline-content">
+                                <strong>Point #${index + 1}:</strong> ${escapeHtml(locationStr)} 
+                                <span style="color:var(--text-muted); font-size:0.75rem;">(Acc: ${pt.accuracy ? pt.accuracy.toFixed(0) : 'N/A'}m)</span>
+                            </div>
+                        `;
+                        timeline.appendChild(item);
+                    });
+                }
+            }
+        } catch(e) {
+            console.error("Failed loading session path details", e);
+            timeline.innerHTML = '<div style="color:var(--error-color); font-size:0.85rem; padding:10px;">Failed to load movement logs.</div>';
+        }
+    }
+
     // Load Data function
     async function loadData() {
-        // Show spinner on reload
         const spinner = document.getElementById('locations-loading');
         if (spinner) spinner.classList.remove('hidden');
 
@@ -313,10 +491,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (locRes.ok) {
                 const locations = await locRes.json();
                 
-                // Reset Spinner
                 if (spinner) spinner.classList.add('hidden');
 
-                // Determine if there are new entries
                 let hasNewEntry = false;
                 let latestNewCity = 'Unknown';
                 let latestLabel = '';
@@ -347,7 +523,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     emptyState.classList.add('hidden');
                     locTable.classList.remove('hidden');
 
-                    // Populate locations
                     locationsList.innerHTML = '';
                     locationsMobileCards.innerHTML = '';
                     
@@ -355,7 +530,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (markersLayer) markersLayer.clearLayers();
 
                     locations.forEach((loc, index) => {
-                        // Desktop table rendering
+                        // Determine if live pulsing badge is needed (update within last 60 seconds)
+                        const entryTime = new Date(loc.timestamp.replace(/-/g, '/'));
+                        const isRecent = Math.abs(new Date() - entryTime) < 60000;
+                        const liveBadgeHtml = (isRecent && loc.session_id) ? `<span class="live-badge">Live</span>` : '';
+
+                        // Desktop table row
                         const row = document.createElement('tr');
                         row.className = 'animate-fade locations-row';
                         
@@ -379,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         row.innerHTML = `
                             <td>${index + 1}</td>
-                            <td>${dotHtml}<strong>${escapeHtml(loc.label)}</strong></td>
+                            <td>${dotHtml}<strong>${escapeHtml(loc.label)}</strong>${liveBadgeHtml}</td>
                             <td>${loc.timestamp}</td>
                             <td>${addressCellHtml}</td>
                             <td>${latLngCol}</td>
@@ -394,7 +574,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                         `;
                         
-                        // Row click triggers Modal details opening, avoiding clicks on buttons
                         row.addEventListener('click', (e) => {
                             if (e.target.closest('button') || e.target.closest('a')) return;
                             openLocationDetails(loc);
@@ -402,12 +581,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         locationsList.appendChild(row);
 
-                        // Mobile card rendering
+                        // Mobile card
                         const mCard = document.createElement('div');
                         mCard.className = 'mobile-card animate-fade';
                         mCard.innerHTML = `
                             <div class="mobile-card-row">
-                                <span class="mobile-card-label">${dotHtml}${escapeHtml(loc.label)}</span>
+                                <span class="mobile-card-label">${dotHtml}${escapeHtml(loc.label)}${liveBadgeHtml}</span>
                                 <span class="mobile-card-time">${loc.timestamp}</span>
                             </div>
                             <div class="mobile-card-meta">
@@ -429,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         locationsMobileCards.appendChild(mCard);
 
-                        // Add to main map if coordinates exist
+                        // Map pins
                         if (!loc.location_denied && loc.latitude && loc.longitude) {
                             const markerLatLng = [loc.latitude, loc.longitude];
                             mapPoints.push(markerLatLng);
@@ -446,7 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             const marker = L.marker(markerLatLng).addTo(markersLayer).bindPopup(popupContent);
 
-                            // Bounce marker if it is a new detection
                             if (!isFirstLoad && hasNewEntry && loc.id === locations[0].id) {
                                 setTimeout(() => {
                                     if (marker._icon) {
@@ -458,13 +636,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
-                    // Auto fit map on load
-                    if (map && mapPoints.length > 0) {
+                    // Auto zoom
+                    if (map && mapPoints.length > 0 && isFirstLoad) {
                         map.fitBounds(mapPoints, { padding: [40, 40], maxZoom: 15 });
                     }
                 }
 
-                // Attach Action Listeners for both Desktop and Mobile Views
+                // Bind click events
                 document.querySelectorAll('.view-loc-btn').forEach(btn => {
                     btn.onclick = function(e) {
                         e.stopPropagation();
@@ -500,9 +678,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 linksMobileCards.innerHTML = '';
 
                 links.forEach(link => {
-                    const fullUrl = `${window.location.origin}/t/${link.link_id}`;
+                    const fullUrl = `${window.location.origin}/t/${link.custom_slug || link.link_id}`;
                     
-                    // Desktop row
                     const row = document.createElement('tr');
                     row.className = 'animate-fade';
                     
@@ -555,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     linksMobileCards.appendChild(mCard);
                 });
 
-                // Attach Links Listeners
+                // Toggles and status binds
                 document.querySelectorAll('.toggle-link-status').forEach(checkbox => {
                     checkbox.addEventListener('change', async function() {
                         const linkId = this.getAttribute('data-id');
@@ -616,7 +793,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalQrContainer = document.getElementById('modal-qrcode');
         modalQrContainer.innerHTML = '';
 
-        // Generate QR code
         new QRCode(modalQrContainer, {
             text: url,
             width: 180,
@@ -626,7 +802,6 @@ document.addEventListener('DOMContentLoaded', function() {
             correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Setup Download PNG click
         document.getElementById('download-qr-btn').onclick = function() {
             const qrImg = modalQrContainer.querySelector('img');
             if (qrImg && qrImg.src) {
@@ -650,15 +825,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Live Link Preview logic
     function updateLinkPreview() {
+        const customSlugEl = document.getElementById('custom-slug');
+        const customSlug = customSlugEl ? customSlugEl.value.trim() : '';
         const labelVal = linkLabelInput.value.trim();
-        const slug = labelVal ? labelVal.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'campaign-id';
+        const slug = customSlug || (labelVal ? labelVal.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'campaign-id');
         document.getElementById('preview-origin').textContent = window.location.origin;
         document.getElementById('preview-path').textContent = `/t/${slug}`;
     }
 
+    const customSlugInput = document.getElementById('custom-slug');
+    const slugStatusIndicator = document.getElementById('slug-status-indicator');
+
+    if (customSlugInput && slugStatusIndicator) {
+        let slugCheckTimeout = null;
+        customSlugInput.addEventListener('input', function() {
+            updateLinkPreview();
+            const slug = this.value.trim();
+            clearTimeout(slugCheckTimeout);
+            
+            if (!slug) {
+                slugStatusIndicator.innerHTML = '';
+                return;
+            }
+
+            const pattern = /^[a-zA-Z0-9\-]+$/;
+            if (!pattern.test(slug) || slug.length > 30) {
+                slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Invalid format</span>';
+                return;
+            }
+
+            slugStatusIndicator.innerHTML = '<span style="color:var(--text-muted);">Checking...</span>';
+
+            slugCheckTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/check-slug/${slug}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.available) {
+                            slugStatusIndicator.innerHTML = '<span style="color:var(--success-color); font-weight:bold;">✔ Available</span>';
+                        } else {
+                            slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Taken</span>';
+                        }
+                    } else {
+                        slugStatusIndicator.innerHTML = '<span style="color:var(--error-color); font-weight:bold;">❌ Error</span>';
+                    }
+                } catch (e) {
+                    slugStatusIndicator.innerHTML = '';
+                }
+            }, 500);
+        });
+    }
+
     linkLabelInput.addEventListener('input', updateLinkPreview);
 
-    // Quick Tags click listener
     document.querySelectorAll('.btn-tag').forEach(btn => {
         btn.addEventListener('click', function() {
             linkLabelInput.value = this.getAttribute('data-tag');
@@ -666,10 +885,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Generate Link Click Handler
     if (generateBtn) {
         generateBtn.addEventListener('click', async function() {
             const label = linkLabelInput.value.trim();
+            const theme = document.getElementById('theme-select').value;
+            const custom_slug = customSlugInput ? customSlugInput.value.trim() : '';
+
             if (!label) {
                 showToast('Validation Error', 'Please enter a campaign label.', 'error');
                 return;
@@ -678,17 +899,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const genRes = await fetch('/api/links/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label })
+                body: JSON.stringify({ label, theme, custom_slug })
             });
 
             if (genRes.ok) {
                 const linkInfo = await genRes.json();
-                const fullUrl = `${window.location.origin}/t/${linkInfo.link_id}`;
+                const urlSlug = linkInfo.custom_slug || linkInfo.link_id;
+                const fullUrl = `${window.location.origin}/t/${urlSlug}`;
                 
                 resultLinkUrl.value = fullUrl;
                 whatsappShareBtn.href = `https://wa.me/?text=${encodeURIComponent('Check this: ' + fullUrl)}`;
                 
-                // Render success QR code
                 const genQrContainer = document.getElementById('gen-qrcode');
                 genQrContainer.innerHTML = '';
                 new QRCode(genQrContainer, {
@@ -700,7 +921,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     correctLevel: QRCode.CorrectLevel.H
                 });
 
-                // Configure success QR download
                 document.getElementById('download-gen-qr-btn').onclick = function() {
                     const qrImg = genQrContainer.querySelector('img');
                     if (qrImg && qrImg.src) {
@@ -721,6 +941,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 generationResult.classList.remove('hidden');
                 linkLabelInput.value = '';
+                if (customSlugInput) customSlugInput.value = '';
+                if (slugStatusIndicator) slugStatusIndicator.innerHTML = '';
                 updateLinkPreview();
                 
                 showToast('Link Generated', 'New secure tracking link created successfully!', 'success');
@@ -728,12 +950,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 resetCountdown();
                 loadData();
             } else {
-                showToast('Server Error', 'Failed to generate tracking link.', 'error');
+                const errData = await genRes.json().catch(() => ({}));
+                showToast('Server Error', errData.error || 'Failed to generate tracking link.', 'error');
             }
         });
     }
 
-    // Copy Link Button
     if (copyLinkBtn) {
         copyLinkBtn.addEventListener('click', function() {
             resultLinkUrl.select();
@@ -745,13 +967,283 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // --- FEATURE 1: Live Tracking Dash & Maps ---
+    async function loadLiveSessions() {
+        try {
+            const res = await fetch('/api/live/sessions');
+            if (res.ok) {
+                const sessions = await res.json();
+                const list = document.getElementById('live-sessions-list');
+                const empty = document.getElementById('live-sessions-empty');
+                const countBadge = document.getElementById('live-devices-count');
+
+                countBadge.textContent = `${sessions.length} Device(s) Active`;
+
+                if (sessions.length === 0) {
+                    empty.classList.remove('hidden');
+                    list.innerHTML = '';
+                } else {
+                    empty.classList.add('hidden');
+                    list.innerHTML = '';
+
+                    sessions.forEach(sess => {
+                        const card = document.createElement('div');
+                        card.className = 'live-device-card animate-fade';
+                        
+                        const batteryStr = sess.battery_level !== null ? `${Math.round(sess.battery_level * 100)}%` : 'N/A';
+                        const shortSessionId = sess.session_id.substring(0, 8);
+
+                        card.innerHTML = `
+                            <div class="live-device-header">
+                                <span class="live-device-label">${escapeHtml(sess.label)}</span>
+                                <span class="live-device-id">${shortSessionId}...</span>
+                            </div>
+                            <div class="live-device-details">
+                                <div class="live-device-detail-item">
+                                    <strong>Last seen:</strong>
+                                    <span class="live-device-detail-value">${sess.timestamp.split(' ')[1]}</span>
+                                </div>
+                                <div class="live-device-detail-item">
+                                    <strong>City:</strong>
+                                    <span class="live-device-detail-value">${escapeHtml(sess.city)}</span>
+                                </div>
+                                <div class="live-device-detail-item">
+                                    <strong>Battery:</strong>
+                                    <span class="live-device-detail-value">${batteryStr}</span>
+                                </div>
+                                <div class="live-device-detail-item">
+                                    <strong>Platform:</strong>
+                                    <span class="live-device-detail-value" style="font-size:0.75rem;">${sess.platform}</span>
+                                </div>
+                            </div>
+                        `;
+
+                        card.addEventListener('click', () => {
+                            openLiveTrackingMapModal(sess.session_id);
+                        });
+
+                        list.appendChild(card);
+                    });
+                }
+            }
+        } catch(e) {
+            console.error("Failed loading live sessions", e);
+        }
+    }
+
+    // Opens live tracking fullscreen map
+    function openLiveTrackingMapModal(sessionId) {
+        document.getElementById('live-map-session-id').textContent = sessionId.substring(0, 16) + '...';
+        liveMapModal.classList.add('open');
+
+        // Setup Leaflet map for live movement
+        setTimeout(() => {
+            if (!liveTrackingMap) {
+                liveTrackingMap = L.map('live-tracking-map');
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                }).addTo(liveTrackingMap);
+                liveTrackingMarkersGroup = L.layerGroup().addTo(liveTrackingMap);
+            } else {
+                liveTrackingMarkersGroup.clearLayers();
+                if (liveTrackingPolyline) liveTrackingMap.removeLayer(liveTrackingPolyline);
+            }
+
+            updateLiveTrackingMap(sessionId);
+            
+            // Poll map updates every 5 seconds
+            if (liveTrackingInterval) clearInterval(liveTrackingInterval);
+            liveTrackingInterval = setInterval(() => {
+                updateLiveTrackingMap(sessionId);
+            }, 5000);
+
+        }, 250);
+    }
+
+    // Updates coordinates, polyline, pulsing markers, and stats
+    async function updateLiveTrackingMap(sessionId) {
+        try {
+            // Stats
+            const statsRes = await fetch(`/api/session/${sessionId}/stats`);
+            let durationStr = '0s';
+            let distanceStr = '0 m';
+            let speedStr = '0.0 km/h';
+
+            if (statsRes.ok) {
+                const stats = await statsRes.json();
+                
+                if (stats.total_distance >= 1000) {
+                    distanceStr = `${(stats.total_distance / 1000).toFixed(2)} km`;
+                } else {
+                    distanceStr = `${stats.total_distance.toFixed(0)} m`;
+                }
+
+                const sec = stats.duration_seconds;
+                if (sec >= 3600) {
+                    durationStr = `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+                } else if (sec >= 60) {
+                    durationStr = `${Math.floor(sec/60)}m ${sec%60}s`;
+                } else {
+                    durationStr = `${sec}s`;
+                }
+
+                // Speed
+                speedStr = `${stats.avg_speed_kmh.toFixed(1)} km/h`;
+            }
+
+            document.getElementById('live-map-distance').textContent = distanceStr;
+            document.getElementById('live-map-duration').textContent = durationStr;
+            document.getElementById('live-map-speed').textContent = speedStr;
+
+            // Fetch coordinates
+            const pathRes = await fetch(`/api/live/path/${sessionId}`);
+            if (pathRes.ok) {
+                const points = await pathRes.json();
+                if (points.length === 0) return;
+
+                liveTrackingMarkersGroup.clearLayers();
+                if (liveTrackingPolyline) liveTrackingMap.removeLayer(liveTrackingPolyline);
+
+                const latlngs = [];
+                points.forEach(pt => {
+                    if (pt.latitude && pt.longitude) latlngs.push([pt.latitude, pt.longitude]);
+                });
+
+                if (latlngs.length > 0) {
+                    // Polyline
+                    liveTrackingPolyline = L.polyline(latlngs, { color: '#6C63FF', weight: 4 }).addTo(liveTrackingMap);
+
+                    // Start marker
+                    L.circleMarker(latlngs[0], { radius: 6, color: '#00e676', fillColor: '#00e676', fillOpacity: 1 }).addTo(liveTrackingMarkersGroup).bindPopup('Start Position');
+
+                    // Current pulsing marker
+                    const currentPos = latlngs[latlngs.length - 1];
+                    const pulsingIcon = L.divIcon({
+                        className: 'pulsing-marker-icon',
+                        iconSize: [12, 12]
+                    });
+
+                    L.marker(currentPos, { icon: pulsingIcon }).addTo(liveTrackingMarkersGroup).bindPopup('Current Location');
+
+                    // Auto pans to latest position
+                    liveTrackingMap.setView(currentPos, Math.max(liveTrackingMap.getZoom(), 15));
+
+                    // Battery
+                    const lastPt = points[points.length - 1];
+                    const batteryStr = lastPt.battery_level !== null ? `${Math.round(lastPt.battery_level * 100)}%` : 'N/A';
+                    document.getElementById('live-map-battery').textContent = batteryStr;
+                }
+            }
+        } catch(e) {
+            console.error("Failed to update live map coordinates", e);
+        }
+    }
+
+    // --- FEATURE 3: Geofence Alerts ---
+    async function loadGeofenceAlerts() {
+        try {
+            const res = await fetch('/api/geofence-alerts');
+            if (res.ok) {
+                const alerts = await res.json();
+                const unreadCount = alerts.filter(a => !a.is_read).length;
+                
+                // Sidebar badge
+                const sidebarBadge = document.getElementById('geofence-alert-badge');
+                if (sidebarBadge) {
+                    if (unreadCount > 0) {
+                        sidebarBadge.textContent = unreadCount;
+                        sidebarBadge.classList.remove('hidden');
+                    } else {
+                        sidebarBadge.classList.add('hidden');
+                    }
+                }
+
+                // If new unread alert comes in
+                if (unreadCount > lastUnreadAlertCount) {
+                    // Trigger sound & flashes
+                    playBeepSound();
+                    flashTabTitle();
+                    showToast('GEOFENCE BREACH!', 'A device entered or exited a geofence zone.', 'error');
+                    
+                    // Show banner
+                    const latestAlert = alerts.find(a => !a.is_read);
+                    if (latestAlert) {
+                        const typeText = latestAlert.alert_type === 'ENTER' ? 'ENTERED' : 'EXITED';
+                        document.getElementById('geofence-alert-text').textContent = `Geofence Alert: Device ${latestAlert.session_id.substring(0,8)} ${typeText} zone "${latestAlert.geofence_name}"!`;
+                        document.getElementById('geofence-alert-banner').classList.remove('hidden');
+                    }
+                }
+                lastUnreadAlertCount = unreadCount;
+
+                // Render dashboard list
+                const list = document.getElementById('geofence-alerts-list');
+                const empty = document.getElementById('geofence-alerts-empty');
+
+                if (alerts.length === 0) {
+                    empty.classList.remove('hidden');
+                    list.innerHTML = '';
+                } else {
+                    empty.classList.add('hidden');
+                    list.innerHTML = '';
+
+                    alerts.slice(0, 10).forEach(alert => {
+                        const item = document.createElement('div');
+                        const unreadClass = alert.is_read ? '' : 'unread';
+                        const badgeClass = alert.alert_type === 'ENTER' ? 'enter' : 'exit';
+                        const badgeText = alert.alert_type === 'ENTER' ? 'Entered' : 'Exited';
+                        const markReadBtn = alert.is_read 
+                            ? '' 
+                            : `<button class="btn btn-secondary btn-xs read-alert-btn" data-id="${alert.id}">Mark as Read</button>`;
+
+                        item.className = `geofence-alert-item ${unreadClass}`;
+                        item.innerHTML = `
+                            <div class="geofence-alert-header">
+                                <span class="alert-badge ${badgeClass}">${badgeText}</span>
+                                <span class="geofence-alert-info">Zone: <b>${escapeHtml(alert.geofence_name)}</b></span>
+                            </div>
+                            <div class="geofence-alert-info" style="font-size:0.8rem; margin-top:2px;">
+                                Session ID: <code style="color:var(--primary-color);">${alert.session_id.substring(0, 12)}...</code>
+                            </div>
+                            <div class="geofence-alert-meta">
+                                <span>${alert.timestamp}</span>
+                                ${markReadBtn}
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    });
+
+                    // Bind mark read buttons
+                    document.querySelectorAll('.read-alert-btn').forEach(btn => {
+                        btn.addEventListener('click', async function(e) {
+                            e.stopPropagation();
+                            const id = this.getAttribute('data-id');
+                            const readRes = await fetch(`/api/geofence-alerts/${id}/read`, { method: 'POST' });
+                            if (readRes.ok) {
+                                loadGeofenceAlerts();
+                            }
+                        });
+                    });
+                }
+            }
+        } catch(e) {
+            console.error("Failed to load geofence alerts", e);
+        }
+    }
+
+    // Close alert banner button
+    const closeAlertBannerBtn = document.getElementById('close-alert-banner-btn');
+    if (closeAlertBannerBtn) {
+        closeAlertBannerBtn.addEventListener('click', () => {
+            document.getElementById('geofence-alert-banner').classList.add('hidden');
+        });
+    }
+
     // Auto Refresh Countdown timer
     function startTimer() {
         updateTimer = setInterval(() => {
             secondsSinceUpdate++;
             countdownVal++;
 
-            // Update time indicator labels
             const updateText = `Last updated: ${secondsSinceUpdate === 0 ? 'just now' : secondsSinceUpdate + 's ago'}`;
             document.getElementById('last-updated-text').textContent = updateText;
             
@@ -769,10 +1261,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 mobileTimer.textContent = `${remaining}s`;
             }
 
+            // Sync polling checks (every 15s)
             if (countdownVal >= 15) {
                 countdownVal = 0;
                 secondsSinceUpdate = 0;
                 loadData();
+                loadLiveSessions();
+                loadGeofenceAlerts();
             }
         }, 1000);
     }
@@ -785,6 +1280,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initializations
     initMap();
     loadData();
+    loadLiveSessions();
+    loadGeofenceAlerts();
     updateLinkPreview();
     startTimer();
 });

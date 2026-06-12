@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viutck - Geofence Zones</title>
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .geofence-layout {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 992px) {
+            .geofence-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        #geofence-map {
+            height: 500px;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        .radius-control-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .radius-slider {
+            flex: 1;
+            accent-color: var(--primary-color);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        .radius-val-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            min-width: 80px;
+            text-align: right;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .checkbox-label input {
+            cursor: pointer;
+            accent-color: var(--primary-color);
+            width: 16px;
+            height: 16px;
+        }
+        .badge-danger {
+            background-color: var(--error-color);
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-wrapper animate-page-load">
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <div class="logo">Viutck</div>
+            <div class="mobile-header-right">
+                <button class="hamburger" id="hamburger-btn" aria-label="Toggle Navigation">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-text">Viutck</span>
+                <span class="logo-badge">Admin</span>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="/admin#dashboard" class="nav-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#locations" class="nav-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            Locations
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#generate" class="nav-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Generate Link
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#links" class="nav-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            All Links
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/analytics" class="nav-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            Analytics
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/geofence" class="nav-item active">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+                            Geofence
+                            <span class="badge-danger hidden" id="geofence-alert-badge" style="margin-left: auto;">0</span>
+                        </a>
+                    </li>
+                    <li class="nav-logout">
+                        <a href="{{ url_for('logout') }}" class="nav-item logout-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h1>Geofence Management</h1>
+                    <div class="refresh-meta">
+                        <span class="refresh-dot-outer"><span class="refresh-dot-inner"></span></span>
+                        <span>Manage circles and triggers</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline">Logout</a>
+                </div>
+            </header>
+
+            <div class="content-container">
+                <div class="geofence-layout">
+                    <!-- Left: Map and Drawer Form -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Draw Geofence Zone</h3>
+                                <span class="status-indicator">Click map to place center</span>
+                            </div>
+                            <div class="card-body" style="padding: 15px;">
+                                <div id="geofence-map"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Geofence Zone Configuration</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="geofence-name">Zone Name / Description</label>
+                                    <input type="text" id="geofence-name" placeholder="e.g., Safe Zone Airport" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Radius (Meters)</label>
+                                    <div class="radius-control-wrapper">
+                                        <input type="range" class="radius-slider" id="geofence-radius" min="100" max="50000" value="500" step="50">
+                                        <span class="radius-val-display" id="radius-value">500 m</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Coordinates Selected</label>
+                                    <input type="text" id="geofence-coords" placeholder="Click on the map to set center point" readonly style="font-family: monospace;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alert Triggers</label>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="alert-on-enter" checked> Alert on Enter
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="alert-on-exit" checked> Alert on Exit
+                                        </label>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-block" id="save-geofence-btn">Save Geofence Zone</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: List of Geofences -->
+                    <div class="card" style="height: fit-content;">
+                        <div class="card-header">
+                            <h3>Saved Geofences</h3>
+                        </div>
+                        <div class="card-body table-responsive" style="padding: 0;">
+                            <table class="data-table" id="geofences-table">
+                                <thead>
+                                    <tr>
+                                        <th>Zone Name</th>
+                                        <th>Radius</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="geofences-list">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                            <div id="geofences-empty" class="empty-state hidden" style="padding: 30px 20px;">
+                                <h4>No Geofences Created</h4>
+                                <p>Click on the map to select a location, set a radius, and save to configure alert triggers.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hamburger
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                    sidebarOverlay.classList.toggle('open');
+                });
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('open');
+                });
+            }
+
+            // Map and fields
+            let map = null;
+            let centerMarker = null;
+            let currentCircle = null;
+            let geofencesLayers = {}; // To store Leaflet circles for saved zones
+            
+            const radiusSlider = document.getElementById('geofence-radius');
+            const radiusVal = document.getElementById('radius-value');
+            const geofenceCoords = document.getElementById('geofence-coords');
+            const geofenceName = document.getElementById('geofence-name');
+            const alertOnEnter = document.getElementById('alert-on-enter');
+            const alertOnExit = document.getElementById('alert-on-exit');
+            const saveBtn = document.getElementById('save-geofence-btn');
+            const geofencesList = document.getElementById('geofences-list');
+            const geofencesEmpty = document.getElementById('geofences-empty');
+
+            let selectedLat = null;
+            let selectedLng = null;
+
+            // Toast helper
+            function showToast(title, message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.innerHTML = `
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                    <button class="toast-close">&times;</button>
+                `;
+                container.appendChild(toast);
+                toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
+                setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+            }
+
+            // Init Leaflet
+            function initMap() {
+                map = L.map('geofence-map').setView([20, 77], 5); // Default to broad view
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                }).addTo(map);
+
+                // Click to place
+                map.on('click', function(e) {
+                    selectedLat = e.latlng.lat;
+                    selectedLng = e.latlng.lng;
+                    geofenceCoords.value = `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+                    
+                    updateSelectionCircle();
+                });
+            }
+
+            function updateSelectionCircle() {
+                if (selectedLat === null || selectedLng === null) return;
+                
+                const radius = parseFloat(radiusSlider.value);
+                const latlng = [selectedLat, selectedLng];
+
+                if (!centerMarker) {
+                    centerMarker = L.marker(latlng, { draggable: true }).addTo(map);
+                    centerMarker.on('drag', function(e) {
+                        const markerLatLng = centerMarker.getLatLng();
+                        selectedLat = markerLatLng.lat;
+                        selectedLng = markerLatLng.lng;
+                        geofenceCoords.value = `${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+                        if (currentCircle) {
+                            currentCircle.setLatLng(markerLatLng);
+                        }
+                    });
+                } else {
+                    centerMarker.setLatLng(latlng);
+                }
+
+                if (!currentCircle) {
+                    currentCircle = L.circle(latlng, {
+                        radius: radius,
+                        color: '#6C63FF',
+                        fillColor: '#6C63FF',
+                        fillOpacity: 0.15,
+                        weight: 2
+                    }).addTo(map);
+                } else {
+                    currentCircle.setLatLng(latlng);
+                    currentCircle.setRadius(radius);
+                }
+
+                map.setView(latlng, map.getZoom());
+            }
+
+            radiusSlider.addEventListener('input', function() {
+                const meters = this.value;
+                if (meters >= 1000) {
+                    radiusVal.textContent = `${(meters / 1000).toFixed(1)} km`;
+                } else {
+                    radiusVal.textContent = `${meters} m`;
+                }
+                
+                if (currentCircle) {
+                    currentCircle.setRadius(parseFloat(meters));
+                }
+            });
+
+            async function loadGeofences() {
+                try {
+                    const res = await fetch('/api/geofences');
+                    if (res.ok) {
+                        const geofences = await res.json();
+                        
+                        // Clear existing layers
+                        Object.values(geofencesLayers).forEach(layer => map.removeLayer(layer));
+                        geofencesLayers = {};
+
+                        if (geofences.length === 0) {
+                            geofencesEmpty.classList.remove('hidden');
+                            geofencesList.innerHTML = '';
+                        } else {
+                            geofencesEmpty.classList.add('hidden');
+                            geofencesList.innerHTML = '';
+                            
+                            const bounds = [];
+
+                            geofences.forEach(gf => {
+                                // Add circle to map
+                                const circleColor = gf.is_active ? '#00e676' : '#8b8ba7';
+                                const circleLayer = L.circle([gf.latitude, gf.longitude], {
+                                    radius: gf.radius_meters,
+                                    color: circleColor,
+                                    fillColor: circleColor,
+                                    fillOpacity: gf.is_active ? 0.12 : 0.05,
+                                    weight: 1.5
+                                }).addTo(map).bindPopup(`<b>${gf.name}</b><br>Radius: ${gf.radius_meters}m`);
+                                
+                                geofencesLayers[gf.id] = circleLayer;
+                                bounds.push([gf.latitude, gf.longitude]);
+
+                                // List row
+                                const row = document.createElement('tr');
+                                const statusCheck = gf.is_active ? 'checked' : '';
+                                const radiusDisplay = gf.radius_meters >= 1000 
+                                    ? `${(gf.radius_meters / 1000).toFixed(1)} km` 
+                                    : `${gf.radius_meters} m`;
+                                
+                                row.innerHTML = `
+                                    <td>
+                                        <div style="font-weight:600; color:#fff;">${gf.name}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${gf.latitude.toFixed(5)}, ${gf.longitude.toFixed(5)}</div>
+                                    </td>
+                                    <td><span class="visits-badge">${radiusDisplay}</span></td>
+                                    <td>
+                                        <label class="switch">
+                                            <input type="checkbox" class="toggle-gf-status" data-id="${gf.id}" ${statusCheck}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger btn-xs delete-gf-btn" data-id="${gf.id}">Delete</button>
+                                    </td>
+                                `;
+
+                                // row click focuses map
+                                row.addEventListener('click', function(e) {
+                                    if (e.target.closest('input') || e.target.closest('button')) return;
+                                    map.setView([gf.latitude, gf.longitude], 14);
+                                    circleLayer.openPopup();
+                                });
+
+                                geofencesList.appendChild(row);
+                            });
+
+                            // Fit map to saved geofences on initial load
+                            if (bounds.length > 0 && selectedLat === null) {
+                                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+                            }
+                        }
+                        
+                        attachRowActions();
+                    }
+                } catch (e) {
+                    console.error('Failed to load geofences', e);
+                }
+            }
+
+            function attachRowActions() {
+                document.querySelectorAll('.toggle-gf-status').forEach(toggle => {
+                    toggle.addEventListener('change', async function() {
+                        const id = this.getAttribute('data-id');
+                        const is_active = this.checked;
+                        try {
+                            const res = await fetch(`/api/geofences/${id}/toggle`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ is_active })
+                            });
+                            if (res.ok) {
+                                showToast('Status Updated', `Geofence zone is now ${is_active ? 'active' : 'inactive'}.`, 'info');
+                                loadGeofences();
+                            }
+                        } catch (e) {
+                            showToast('Error', 'Failed to toggle status.', 'error');
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.delete-gf-btn').forEach(btn => {
+                    btn.addEventListener('click', async function(e) {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this geofence zone? All associated alerts will also be deleted.')) {
+                            const id = this.getAttribute('data-id');
+                            try {
+                                const res = await fetch(`/api/geofences/${id}`, { method: 'DELETE' });
+                                if (res.ok) {
+                                    showToast('Zone Deleted', 'Geofence zone has been removed.', 'error');
+                                    loadGeofences();
+                                }
+                            } catch (e) {
+                                showToast('Error', 'Failed to delete geofence.', 'error');
+                            }
+                        }
+                    });
+                });
+            }
+
+            saveBtn.addEventListener('click', async function() {
+                const name = geofenceName.value.trim();
+                const radius = parseFloat(radiusSlider.value);
+                
+                if (!name) {
+                    showToast('Validation Error', 'Please enter a name for the geofence zone.', 'error');
+                    return;
+                }
+
+                if (selectedLat === null || selectedLng === null) {
+                    showToast('Validation Error', 'Please click on the map to set the center point.', 'error');
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/api/geofences', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            latitude: selectedLat,
+                            longitude: selectedLng,
+                            radius_meters: radius,
+                            alert_on_enter: alertOnEnter.checked,
+                            alert_on_exit: alertOnExit.checked
+                        })
+                    });
+
+                    if (res.ok) {
+                        showToast('Geofence Created', 'New geofence zone saved and active!', 'success');
+                        
+                        // Reset form selection
+                        geofenceName.value = '';
+                        geofenceCoords.value = '';
+                        if (centerMarker) { map.removeLayer(centerMarker); centerMarker = null; }
+                        if (currentCircle) { map.removeLayer(currentCircle); currentCircle = null; }
+                        selectedLat = null;
+                        selectedLng = null;
+
+                        loadGeofences();
+                    } else {
+                        const err = await res.json();
+                        showToast('Server Error', err.error || 'Failed to save geofence.', 'error');
+                    }
+                } catch (e) {
+                    showToast('Error', 'Connection failed.', 'error');
+                }
+            });
+
+            // Poller for unread geofence alerts count to show badge
+            async function checkAlertsBadge() {
+                try {
+                    const res = await fetch('/api/geofence-alerts');
+                    if (res.ok) {
+                        const alerts = await res.json();
+                        const unreadCount = alerts.filter(a => !a.is_read).length;
+                        const badge = document.getElementById('geofence-alert-badge');
+                        if (badge) {
+                            if (unreadCount > 0) {
+                                badge.textContent = unreadCount;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            initMap();
+            loadGeofences();
+            checkAlertsBadge();
+            setInterval(checkAlertsBadge, 15000);
+        });
+    </script>
+</body>
+</html>

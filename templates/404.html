@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f0f1a;
+            color: #8b8ba7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+        .error-container {
+            max-width: 440px;
+            width: 100%;
+        }
+        .error-code {
+            font-size: 6.5rem;
+            font-weight: 800;
+            color: #6C63FF;
+            line-height: 1;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+            text-shadow: 0 0 30px rgba(108, 99, 255, 0.2);
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .btn-home {
+            display: inline-block;
+            background-color: #1a1a2e;
+            border: 1px solid #2e2e4f;
+            color: #f1f1f9;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .btn-home:hover {
+            border-color: #6C63FF;
+            background-color: rgba(108, 99, 255, 0.05);
+            box-shadow: 0 0 15px rgba(108, 99, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code">404</div>
+        <h1>Link Expired or Invalid</h1>
+        <p>The link you are trying to access has expired, been disabled by the administrator, or does not exist. Please check the URL and try again.</p>
+        <a href="/" class="btn-home">Return to Site</a>
+    </div>
+</body>
+</html>

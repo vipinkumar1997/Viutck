@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viutck - Analytics Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analytics-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+        .charts-row-1 {
+            display: grid;
+            grid-template-columns: 1.6fr 1.10fr;
+            gap: 24px;
+        }
+        .charts-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .charts-row-3 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        .charts-row-4 {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 24px;
+        }
+        .chart-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 340px;
+        }
+        .chart-card h4 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 12px;
+            margin-bottom: 4px;
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+        .permission-progress-card {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+            height: 100%;
+        }
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+        .progress-bar-bg {
+            background-color: rgba(255, 255, 255, 0.05);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .fill-success {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+        .fill-danger {
+            background-color: var(--error-color);
+            box-shadow: 0 0 8px var(--error-color);
+        }
+        .loading-cover {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.4s ease;
+        }
+        .loading-cover.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        @media (max-width: 992px) {
+            .charts-row-1, .charts-row-2, .charts-row-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Fullscreen Loading Spinner -->
+    <div id="loading-cover" class="loading-cover">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="admin-wrapper animate-page-load">
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <div class="logo">Viutck</div>
+            <div class="mobile-header-right">
+                <button class="hamburger" id="hamburger-btn" aria-label="Toggle Navigation">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-text">Viutck</span>
+                <span class="logo-badge">Admin</span>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="/admin#dashboard" class="nav-item" data-target="dashboard-section">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#locations" class="nav-item" data-target="locations-section">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            Locations
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#generate" class="nav-item" data-target="generate-section">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Generate Link
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin#links" class="nav-item" data-target="links-section">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            All Links
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/analytics" class="nav-item active">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            Analytics
+                        </a>
+                    </li>
+                    <li class="nav-logout">
+                        <a href="{{ url_for('logout') }}" class="nav-item logout-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h1>Analytics Dashboard</h1>
+                    <div class="refresh-meta">
+                        <span class="refresh-dot-outer"><span class="refresh-dot-inner"></span></span>
+                        <span>Aggregate Tracking & Device Telemetry</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline">Logout</a>
+                </div>
+            </header>
+
+            <div class="content-container">
+                <div class="analytics-grid">
+                    <!-- Top Stats Row -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-info">
+                                    <span class="stat-title">Total Captures</span>
+                                    <span class="stat-value" id="stat-total-captures">0</span>
+                                </div>
+                                <div class="stat-icon purple">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                </div>
+                            </div>
+                            <div class="stat-card-footer">
+                                <span style="color: var(--success-color);">↑ Overall captures count</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-info">
+                                    <span class="stat-title">Today's Captures</span>
+                                    <span class="stat-value" id="stat-today-captures">0</span>
+                                </div>
+                                <div class="stat-icon blue">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                </div>
+                            </div>
+                            <div class="stat-card-footer">
+                                <span>Recent 24 hour activity</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-info">
+                                    <span class="stat-title">Permission Rate</span>
+                                    <span class="stat-value" id="stat-permission-rate">0%</span>
+                                </div>
+                                <div class="stat-icon green">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                </div>
+                            </div>
+                            <div class="stat-card-footer">
+                                <span>GPS Allowed percentage</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-info">
+                                    <span class="stat-title">Mobile Share</span>
+                                    <span class="stat-value" id="stat-mobile-share">0%</span>
+                                </div>
+                                <div class="stat-icon purple">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                                </div>
+                            </div>
+                            <div class="stat-card-footer">
+                                <span>Handheld browser ratio</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 1: Line Chart & Doughnut Device Types -->
+                    <div class="charts-row-1">
+                        <div class="chart-card">
+                            <h4>Captures over last 14 days</h4>
+                            <div class="chart-container">
+                                <canvas id="line-captures"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h4>Device Types</h4>
+                            <div class="chart-container">
+                                <canvas id="doughnut-devices"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Top 10 Cities & Browsers -->
+                    <div class="charts-row-2">
+                        <div class="chart-card">
+                            <h4>Top 10 Cities</h4>
+                            <div class="chart-container">
+                                <canvas id="bar-cities"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h4>Browser Distribution</h4>
+                            <div class="chart-container">
+                                <canvas id="doughnut-browsers"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Hourly Heatmap -->
+                    <div class="charts-row-3">
+                        <div class="chart-card">
+                            <h4>Activity by Hour of Day (Heatmap)</h4>
+                            <div class="chart-container">
+                                <canvas id="bar-hourly"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Connection Types & Permission Progress -->
+                    <div class="charts-row-4">
+                        <div class="chart-card">
+                            <h4>Connection Network Types</h4>
+                            <div class="chart-container">
+                                <canvas id="bar-connections"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h4>GPS Permission Analysis</h4>
+                            <div class="permission-progress-card">
+                                <div class="progress-item">
+                                    <div class="progress-labels">
+                                        <span>GPS Allowed</span>
+                                        <span id="label-gps-allowed">0 (0%)</span>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div id="bar-gps-allowed" class="progress-bar-fill fill-success" style="width: 0%;"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-labels">
+                                        <span>GPS Denied</span>
+                                        <span id="label-gps-denied">0 (0%)</span>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div id="bar-gps-denied" class="progress-bar-fill fill-danger" style="width: 0%;"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-labels" style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">
+                                        <span>Average Accuracy</span>
+                                        <span id="label-avg-accuracy">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fingerprint Details Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Device Fingerprint Details (Last 20 Captures)</h3>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="data-table" id="fingerprint-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Label</th>
+                                        <th>Device</th>
+                                        <th>Browser</th>
+                                        <th>OS</th>
+                                        <th>Screen</th>
+                                        <th>Timezone</th>
+                                        <th>Cores</th>
+                                        <th>RAM</th>
+                                        <th>Battery</th>
+                                        <th>Canvas Hash</th>
+                                        <th>Fonts</th>
+                                        <th>Network</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fingerprint-list">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Background overlay for mobile sidebar -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const loadingCover = document.getElementById('loading-cover');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+            // Mobile toggle
+            hamburgerBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('open');
+            });
+            sidebarOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('open');
+            });
+
+            // Global Chart Options
+            Chart.defaults.color = '#a0a0b0';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+            Chart.defaults.font.family = "'Outfit', sans-serif";
+
+            try {
+                const res = await fetch('/api/analytics');
+                if (!res.ok) throw new Error("Failed to fetch analytics");
+                
+                const data = await res.json();
+                
+                // Update Top Stats
+                document.getElementById('stat-total-captures').textContent = data.total_locations;
+                document.getElementById('stat-today-captures').textContent = data.locations_today;
+                document.getElementById('stat-permission-rate').textContent = data.permission_rate + '%';
+                document.getElementById('stat-mobile-share').textContent = data.mobile_percentage + '%';
+
+                // Update Progress bars
+                const total = data.total_locations || 1;
+                const allowedPct = (data.allowed_count / total * 100).toFixed(1);
+                const deniedPct = (data.denied_count / total * 100).toFixed(1);
+                
+                document.getElementById('label-gps-allowed').textContent = `${data.allowed_count} (${allowedPct}%)`;
+                document.getElementById('bar-gps-allowed').style.width = allowedPct + '%';
+                
+                document.getElementById('label-gps-denied').textContent = `${data.denied_count} (${deniedPct}%)`;
+                document.getElementById('bar-gps-denied').style.width = deniedPct + '%';
+                
+                document.getElementById('label-avg-accuracy').textContent = data.avg_accuracy ? `${data.avg_accuracy} meters` : 'N/A';
+
+                // Render Tables
+                renderFingerprintTable(data.recent_locations);
+
+                // Render Charts
+                renderLineChart(data.by_date);
+                renderDeviceTypesChart(data.by_device_type);
+                renderCitiesChart(data.by_city);
+                renderBrowsersChart(data.by_browser);
+                renderHourlyChart(data.by_hour);
+                renderConnectionsChart(data.by_connection);
+
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loadingCover.classList.add('fade-out');
+                setTimeout(() => loadingCover.remove(), 400);
+            }
+
+            function renderFingerprintTable(recentLocations) {
+                const list = document.getElementById('fingerprint-list');
+                list.innerHTML = '';
+                
+                if (!recentLocations || recentLocations.length === 0) {
+                    list.innerHTML = `<tr><td colspan="13" class="text-center text-muted" style="padding:40px 0;">No fingerprint entries captured yet.</td></tr>`;
+                    return;
+                }
+
+                recentLocations.forEach(loc => {
+                    // Fetch full location entry metrics
+                    fetch('/api/locations')
+                        .then(res => res.ok ? res.json() : [])
+                        .then(allLocs => {
+                            const fullLoc = allLocs.find(l => l.id === loc.id);
+                            if (!fullLoc) return;
+                            
+                            const tr = document.createElement('tr');
+                            
+                            const deviceType = fullLoc.is_tablet ? 'Tablet' : (fullLoc.is_mobile ? 'Mobile' : 'Desktop');
+                            
+                            // Parse OS/Browser
+                            const browserVal = fullLoc.user_agent ? parseBrowserName(fullLoc.user_agent) : 'Unknown';
+                            
+                            // Battery
+                            let batteryStr = 'N/A';
+                            if (fullLoc.battery_level !== null) {
+                                const bLevel = Math.round(fullLoc.battery_level * 100);
+                                batteryStr = `${bLevel}% (${fullLoc.battery_charging ? 'Charging' : 'Bat'})`;
+                            }
+                            
+                            // Fonts count
+                            const fontCount = fullLoc.fonts_detected ? fullLoc.fonts_detected.split(',').length : 0;
+                            
+                            tr.innerHTML = `
+                                <td>${fullLoc.timestamp}</td>
+                                <td><strong>${escapeHtml(fullLoc.label)}</strong></td>
+                                <td>${deviceType}</td>
+                                <td>${escapeHtml(browserVal)}</td>
+                                <td>${escapeHtml(fullLoc.platform || 'Unknown')}</td>
+                                <td><span style="font-size:0.85rem;">${escapeHtml(fullLoc.screen_resolution || 'Unknown')}</span></td>
+                                <td><span style="font-size:0.85rem;">${escapeHtml(fullLoc.timezone || 'Unknown')}</span></td>
+                                <td>${fullLoc.cpu_cores || 'N/A'}</td>
+                                <td>${fullLoc.device_memory ? fullLoc.device_memory + ' GB' : 'N/A'}</td>
+                                <td><span style="font-size:0.85rem;">${batteryStr}</span></td>
+                                <td><code style="font-size:0.75rem;">${fullLoc.canvas_fingerprint ? escapeHtml(fullLoc.canvas_fingerprint) : 'N/A'}</code></td>
+                                <td>${fontCount}</td>
+                                <td><span class="visits-badge">${escapeHtml(fullLoc.connection_type || 'Unknown')}</span></td>
+                            `;
+                            list.appendChild(tr);
+                        });
+                });
+            }
+
+            function parseBrowserName(ua) {
+                if ('Chrome' in window || ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) return 'Chrome';
+                if (ua.indexOf('Firefox') > -1) return 'Firefox';
+                if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) return 'Safari';
+                if (ua.indexOf('Edg') > -1) return 'Edge';
+                if (ua.indexOf('Opera') > -1 || ua.indexOf('OPR') > -1) return 'Opera';
+                return 'Other';
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+            // Charts Rendering Functions
+            function renderLineChart(byDate) {
+                const ctx = document.getElementById('line-captures').getContext('2d');
+                const labels = byDate.map(d => d.date);
+                const values = byDate.map(d => d.count);
+                
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(108, 99, 255, 0.4)');
+                gradient.addColorStop(1, 'rgba(108, 99, 255, 0.0)');
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Captures',
+                            data: values,
+                            borderColor: '#6C63FF',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#6C63FF'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            }
+
+            function renderDeviceTypesChart(byDevice) {
+                const ctx = document.getElementById('doughnut-devices').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Mobile', 'Tablet', 'Desktop'],
+                        datasets: [{
+                            data: [byDevice.mobile, byDevice.tablet, byDevice.desktop],
+                            backgroundColor: ['#6C63FF', '#FF6584', '#43E97B'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            function renderCitiesChart(byCity) {
+                const ctx = document.getElementById('bar-cities').getContext('2d');
+                const labels = byCity.map(c => c.name || 'Unknown');
+                const values = byCity.map(c => c.count);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: '#6C63FF',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            }
+
+            function renderBrowsersChart(byBrowser) {
+                const ctx = document.getElementById('doughnut-browsers').getContext('2d');
+                const labels = byBrowser.map(b => b.name);
+                const values = byBrowser.map(b => b.count);
+                const colors = ['#6C63FF', '#FF6584', '#43E97B', '#FF9F43', '#00D2FC', '#C5A5FF'];
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: colors.slice(0, labels.length),
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            function renderHourlyChart(byHour) {
+                const ctx = document.getElementById('bar-hourly').getContext('2d');
+                const labels = byHour.map(h => `${h.hour}:00`);
+                const values = byHour.map(h => h.count);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: 'rgba(108, 99, 255, 0.85)',
+                            hoverBackgroundColor: '#6C63FF',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            }
+
+            function renderConnectionsChart(byConnection) {
+                const ctx = document.getElementById('bar-connections').getContext('2d');
+                const labels = byConnection.map(c => c.name || 'Unknown');
+                const values = byConnection.map(c => c.count);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: '#43E97B',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

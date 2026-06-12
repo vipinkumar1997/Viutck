@@ -1411,3 +1411,339 @@ input:checked + .slider:before {
         grid-column: span 1;
     }
 }
+
+/* Feature Updates Styling */
+
+.badge-danger {
+    background-color: var(--error-color);
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Alert Banner */
+.alert-banner-box {
+    background-color: var(--error-color);
+    color: #ffffff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+    z-index: 1005;
+    animation: alertSlideDown 0.4s ease-out;
+    position: sticky;
+    top: 0;
+}
+
+@keyframes alertSlideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+.alert-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alert-banner-icon {
+    font-size: 1.2rem;
+}
+
+.alert-banner-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.6rem;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.alert-banner-close:hover {
+    opacity: 1;
+}
+
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.15);
+}
+
+.modal-tab-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border-bottom: 2px solid transparent;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.modal-tab-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.modal-tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background-color: rgba(108, 99, 255, 0.05);
+}
+
+.modal-tab-panel {
+    display: none;
+}
+
+.modal-tab-panel.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Live Badge */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: rgba(0, 230, 118, 0.12);
+    color: var(--success-color);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid rgba(0, 230, 118, 0.25);
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.live-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--success-color);
+    animation: pulse 1.5s infinite;
+}
+
+/* Live Tracked Device Cards */
+.live-device-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.live-device-card:hover {
+    border-color: var(--primary-color);
+    background: rgba(108, 99, 255, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 99, 255, 0.15);
+}
+
+.live-device-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background-color: var(--success-color);
+}
+
+.live-device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.live-device-id {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.live-device-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #ffffff;
+}
+
+.live-device-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.live-device-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.live-device-detail-value {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Geofence Alerts Section */
+.geofence-alert-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.geofence-alert-item:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.geofence-alert-item.unread {
+    background-color: rgba(255, 23, 68, 0.05);
+    border-left: 3px solid var(--error-color);
+}
+
+.geofence-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.alert-badge.enter {
+    background-color: rgba(0, 230, 118, 0.15);
+    color: var(--success-color);
+    border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.alert-badge.exit {
+    background-color: rgba(255, 23, 68, 0.15);
+    color: #ff5252;
+    border: 1px solid rgba(255, 23, 68, 0.25);
+}
+
+.geofence-alert-info {
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+
+.geofence-alert-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* Timeline */
+.timeline-item {
+    position: relative;
+    padding-left: 24px;
+    border-left: 2px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.timeline-item:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -6px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    border: 2px solid var(--card-bg);
+}
+
+.timeline-item.first .timeline-dot {
+    background-color: var(--success-color);
+    box-shadow: 0 0 6px var(--success-color);
+}
+
+.timeline-item.last .timeline-dot {
+    background-color: var(--error-color);
+    box-shadow: 0 0 6px var(--error-color);
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.timeline-content {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    margin-top: 4px;
+}
+
+/* Leaflet Custom Pulsing Markers */
+.pulsing-marker-icon {
+    background: var(--success-color);
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--success-color);
+}
+
+.pulsing-marker-icon::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--success-color);
+    border-radius: 50%;
+    animation: markerPulse 1.5s infinite ease-out;
+    opacity: 0;
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { opacity: 0.8; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .dashboard-two-column-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
