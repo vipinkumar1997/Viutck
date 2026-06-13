@@ -86,13 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Dual-signature global showToast function
     function showToast(messageOrTitle, messageOrType = 'info', typeOrDuration = 3000) {
-        let message = messageOrTitle;
         let type = messageOrType;
         let duration = typeof typeOrDuration === 'number' ? typeOrDuration : 3000;
+        let title = null;
+        let message = messageOrTitle;
         
         // Match older three-argument calls: showToast(title, message, type)
         if (typeof typeOrDuration === 'string') {
-            message = `<b>${messageOrTitle}</b>: ${messageOrType}`;
+            title = messageOrTitle;
+            message = messageOrType;
             type = typeOrDuration;
             duration = 5000;
         }
@@ -102,12 +104,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const toast = document.createElement('div');
         toast.className = 'toast ' + type;
-        toast.innerHTML = `
-            <span>${message}</span>
-            <button class="toast-close" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer; line-height:1; margin-left:12px;">&times;</button>
-        `;
+        const messageSpan = document.createElement('span');
+        if (title) {
+            const titleEl = document.createElement('b');
+            titleEl.textContent = title;
+            messageSpan.appendChild(titleEl);
+            messageSpan.appendChild(document.createTextNode(`: ${message}`));
+        } else {
+            messageSpan.textContent = message;
+        }
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', 'Dismiss notification');
+        closeBtn.textContent = '\u00d7';
+        toast.appendChild(messageSpan);
+        toast.appendChild(closeBtn);
         
-        toast.querySelector('.toast-close').onclick = function() {
+        closeBtn.onclick = function() {
             toast.remove();
         };
         
@@ -260,6 +274,51 @@ document.addEventListener('DOMContentLoaded', function() {
         return text.replace(/[&<>"']/g, m => map[m]);
     }
 
+    function hasValidCoordinates(loc) {
+        return loc
+            && loc.latitude !== null
+            && loc.latitude !== undefined
+            && loc.longitude !== null
+            && loc.longitude !== undefined
+            && Number.isFinite(Number(loc.latitude))
+            && Number.isFinite(Number(loc.longitude));
+    }
+
+    function syncResponsiveLists() {
+        const locationsTable = document.getElementById('locations-table');
+        const linksTable = document.getElementById('links-table');
+        const hasLocations = locationsMobileCards && locationsMobileCards.children.length > 0;
+        const hasLinks = linksMobileCards && linksMobileCards.children.length > 0;
+
+        if (locationsTable) {
+            const wrapper = locationsTable.parentNode;
+            if (!hasLocations) {
+                wrapper.style.display = 'none';
+                locationsMobileCards.style.display = 'none';
+            } else if (window.innerWidth <= 768) {
+                wrapper.style.display = 'none';
+                locationsMobileCards.style.display = 'flex';
+            } else {
+                wrapper.style.display = 'block';
+                locationsMobileCards.style.display = 'none';
+            }
+        }
+
+        if (linksTable) {
+            const wrapper = linksTable.parentNode;
+            if (!hasLinks) {
+                wrapper.style.display = 'none';
+                linksMobileCards.style.display = 'none';
+            } else if (window.innerWidth <= 768) {
+                wrapper.style.display = 'none';
+                linksMobileCards.style.display = 'flex';
+            } else {
+                wrapper.style.display = 'block';
+                linksMobileCards.style.display = 'none';
+            }
+        }
+    }
+
     // User Agent Parser Helper
     function parseUserAgent(ua, platform) {
         if (!ua) return platform || 'Unknown';
@@ -352,32 +411,35 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('det-resolution').textContent = loc.screen_resolution || 'Unknown';
         document.getElementById('det-language').textContent = loc.language || 'Unknown';
         document.getElementById('det-timestamp').textContent = loc.timestamp;
-        document.getElementById('det-accuracy').textContent = loc.accuracy ? `${loc.accuracy.toFixed(1)} m` : 'N/A';
+        document.getElementById('det-accuracy').textContent = loc.accuracy !== null && loc.accuracy !== undefined ? `${Number(loc.accuracy).toFixed(1)} m` : 'N/A';
         document.getElementById('det-browser').textContent = parseUserAgent(loc.user_agent, loc.platform);
         document.getElementById('det-os').textContent = loc.platform || 'Unknown';
+        const hasCoords = hasValidCoordinates(loc);
 
         // Bind Copy Coordinates safely
         document.getElementById('copy-coords-btn').onclick = function() {
-            if (loc.location_denied) {
-                navigator.clipboard.writeText('Location Access Denied');
-                showToast('Location access denial copied.', 'info');
-            } else {
-                const lat = loc.latitude;
-                const lng = loc.longitude;
+            if (hasCoords) {
+                const lat = Number(loc.latitude);
+                const lng = Number(loc.longitude);
                 navigator.clipboard.writeText(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
                 showToast('Coordinates copied to clipboard.', 'info');
+            } else {
+                navigator.clipboard.writeText('Location unavailable');
+                showToast('Location unavailable note copied.', 'info');
             }
         };
 
-        if (loc.location_denied) {
-            document.getElementById('det-coords').textContent = 'Location Access Denied';
-            document.getElementById('det-address').innerHTML = '<span class="location-denied-badge">Location Denied by User</span>';
+        if (!hasCoords) {
+            document.getElementById('det-coords').textContent = loc.location_denied ? 'Location Access Denied' : 'Coordinates Unavailable';
+            document.getElementById('det-address').textContent = loc.location_denied ? 'Location Denied by User' : (loc.address || loc.city || 'Unknown Address');
+            document.getElementById('det-address').classList.toggle('location-denied-badge', Boolean(loc.location_denied));
             document.getElementById('modal-map').parentNode.style.display = 'none';
         } else {
-            const lat = loc.latitude;
-            const lng = loc.longitude;
+            const lat = Number(loc.latitude);
+            const lng = Number(loc.longitude);
             document.getElementById('det-coords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             document.getElementById('det-address').textContent = loc.address || loc.city || 'Unknown Address';
+            document.getElementById('det-address').classList.remove('location-denied-badge');
             document.getElementById('modal-map').parentNode.style.display = 'block';
 
             // Render/reset Map in modal
@@ -420,12 +482,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const histDuration = document.getElementById('hist-stat-duration');
         const histSpeed = document.getElementById('hist-stat-speed');
         const timeline = document.getElementById('history-timeline');
+        const encodedSessionId = encodeURIComponent(sessionId);
 
         timeline.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem; padding:10px;">Loading history path...</div>';
 
         try {
             // Stats
-            const statsRes = await fetch(`/api/session/${sessionId}/stats`);
+            const statsRes = await fetch(`/api/session/${encodedSessionId}/stats`);
             if (statsRes.ok) {
                 const stats = await statsRes.json();
                 
@@ -448,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Path points
-            const pathRes = await fetch(`/api/session/${sessionId}/path`);
+            const pathRes = await fetch(`/api/session/${encodedSessionId}/path`);
             if (pathRes.ok) {
                 const points = await pathRes.json();
                 
@@ -466,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const latlngs = [];
                     points.forEach(pt => {
-                        if (pt.latitude && pt.longitude) latlngs.push([pt.latitude, pt.longitude]);
+                        if (hasValidCoordinates(pt)) latlngs.push([Number(pt.latitude), Number(pt.longitude)]);
                     });
 
                     if (latlngs.length > 0) {
@@ -568,11 +631,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const locTable = document.getElementById('locations-table');
                 if (locations.length === 0) {
                     emptyState.classList.remove('hidden');
-                    locTable.parentNode.style.display = 'none'; // hide responsive wrapper
+                    locTable.parentNode.style.display = 'none';
                     locationsMobileCards.innerHTML = '';
+                    syncResponsiveLists();
                 } else {
                     emptyState.classList.add('hidden');
-                    locTable.parentNode.style.display = 'block';
 
                     locationsList.innerHTML = '';
                     locationsMobileCards.innerHTML = '';
@@ -601,21 +664,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             addressCellHtml = `${pinSvg}<span class="truncate-address" title="${escapeHtml(fullAddr)}">${escapeHtml(fullAddr)}</span>`;
                         }
 
-                        const latLngCol = loc.location_denied 
+                        const hasCoords = hasValidCoordinates(loc);
+                        const latLngCol = !hasCoords
                             ? '<span class="location-denied-badge">Denied</span>' 
-                            : `${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}`;
+                            : `${Number(loc.latitude).toFixed(6)}, ${Number(loc.longitude).toFixed(6)}`;
 
                         const browserInfo = parseUserAgent(loc.user_agent, loc.platform);
 
                         row.innerHTML = `
                             <td>${index + 1}</td>
                             <td>${dotHtml}<strong class="truncate-text" title="${escapeHtml(loc.label)}">${escapeHtml(loc.label)}</strong>${liveBadgeHtml}</td>
-                            <td>${loc.timestamp}</td>
+                            <td>${escapeHtml(loc.timestamp || '')}</td>
                             <td>${addressCellHtml}</td>
                             <td>${latLngCol}</td>
-                            <td><code>${loc.ip_address}</code></td>
+                            <td><code>${escapeHtml(loc.ip_address || 'Unknown')}</code></td>
                             <td><span class="truncate-text" style="font-size: 0.85rem;" title="${escapeHtml(loc.user_agent)}">${escapeHtml(browserInfo)}</span></td>
-                            <td>${loc.accuracy ? loc.accuracy.toFixed(1) + ' m' : 'N/A'}</td>
+                            <td>${loc.accuracy !== null && loc.accuracy !== undefined ? Number(loc.accuracy).toFixed(1) + ' m' : 'N/A'}</td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-outline btn-xs view-loc-btn" data-id="${loc.id}">View</button>
@@ -638,13 +702,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         mCard.innerHTML = `
                             <div class="mobile-card-row" style="display:flex; justify-content:space-between; align-items:center;">
                                 <span class="mobile-card-label" style="font-weight:700;">${dotHtml}${escapeHtml(loc.label)}${liveBadgeHtml}</span>
-                                <span class="mobile-card-time" style="font-size:0.75rem; color:var(--text-secondary);">${loc.timestamp.split(' ')[1]}</span>
+                                <span class="mobile-card-time" style="font-size:0.75rem; color:var(--text-secondary);">${escapeHtml((loc.timestamp || '').split(' ')[1] || loc.timestamp || '')}</span>
                             </div>
                             <div class="mobile-card-meta" style="font-size:0.85rem;">
                                 <strong>City:</strong> ${loc.location_denied ? '<span class="text-muted">Denied</span>' : escapeHtml(loc.city || 'Unknown')}
                             </div>
                             <div class="mobile-card-meta" style="font-size:0.85rem;">
-                                <strong>IP Address:</strong> <code>${loc.ip_address}</code>
+                                <strong>IP Address:</strong> <code>${escapeHtml(loc.ip_address || 'Unknown')}</code>
                             </div>
                             <div class="mobile-card-actions" style="display:flex; gap:10px; margin-top:8px;">
                                 <button class="btn btn-outline btn-xs view-loc-btn" data-id="${loc.id}" style="flex:1;">Details</button>
@@ -660,8 +724,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         locationsMobileCards.appendChild(mCard);
 
                         // Map pins
-                        if (!loc.location_denied && loc.latitude && loc.longitude) {
-                            const markerLatLng = [loc.latitude, loc.longitude];
+                        if (!loc.location_denied && hasCoords) {
+                            const markerLatLng = [Number(loc.latitude), Number(loc.longitude)];
                             mapPoints.push(markerLatLng);
 
                             const popupContent = `
@@ -669,8 +733,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <h4>${escapeHtml(loc.label)}</h4>
                                     <p><strong>City:</strong> ${escapeHtml(loc.city || 'Unknown')}</p>
                                     <p><strong>Time:</strong> ${loc.timestamp}</p>
-                                    <p><strong>IP:</strong> ${loc.ip_address}</p>
-                                    <p><strong>Device:</strong> ${loc.platform}</p>
+                                    <p><strong>IP:</strong> ${escapeHtml(loc.ip_address || 'Unknown')}</p>
+                                    <p><strong>Device:</strong> ${escapeHtml(loc.platform || 'Unknown')}</p>
                                 </div>
                             `;
 
@@ -687,14 +751,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
 
-                    // Trigger responsive card-to-table layouts
-                    if (window.innerWidth <= 768) {
-                        locTable.parentNode.style.display = 'none'; // hide table wrapper
-                        locationsMobileCards.style.display = 'flex'; // show mobile cards grid
-                    } else {
-                        locTable.parentNode.style.display = 'block';
-                        locationsMobileCards.style.display = 'none';
-                    }
+                    syncResponsiveLists();
 
                     // Auto zoom
                     if (map && mapPoints.length > 0 && isFirstLoad) {
@@ -734,11 +791,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const linksRes = await fetch('/api/links');
             if (linksRes.ok) {
                 const links = await linksRes.json();
+                const linksEmpty = document.getElementById('links-empty');
                 linksList.innerHTML = '';
                 linksMobileCards.innerHTML = '';
+                if (linksEmpty) {
+                    linksEmpty.classList.toggle('hidden', links.length > 0);
+                }
 
                 links.forEach(link => {
                     const fullUrl = `${window.location.origin}/t/${link.custom_slug || link.link_id}`;
+                    const safeFullUrl = escapeHtml(fullUrl);
                     
                     const row = document.createElement('tr');
                     row.className = 'animate-fade';
@@ -753,11 +815,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="slider"></span>
                             </label>
                         </td>
-                        <td><div style="max-width: 15vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><input type="text" class="link-url-input" value="${fullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-secondary); cursor:pointer;" onclick="this.select()"></div></td>
+                        <td><div style="max-width: 15vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><input type="text" class="link-url-input" value="${safeFullUrl}" readonly style="background:transparent; border:none; width:100%; color:var(--text-secondary); cursor:pointer;" onclick="this.select()"></div></td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}">Copy</button>
-                                <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${fullUrl}">Show QR</button>
+                                <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${safeFullUrl}">Copy</button>
+                                <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${safeFullUrl}">Show QR</button>
                                 <a href="https://wa.me/?text=${encodeURIComponent('Check this link: ' + fullUrl)}" target="_blank" class="btn btn-success btn-xs">WhatsApp</a>
                                 <button class="btn btn-danger btn-xs delete-link-btn" data-id="${link.link_id}">Delete</button>
                             </div>
@@ -785,21 +847,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             </label>
                         </div>
                         <div class="mobile-card-actions" style="display:flex; gap:10px; margin-top:8px;">
-                            <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${fullUrl}" style="flex:1;">Copy</button>
-                            <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${fullUrl}" style="flex:1;">Show QR</button>
+                            <button class="btn btn-secondary btn-xs copy-row-btn" data-url="${safeFullUrl}" style="flex:1;">Copy</button>
+                            <button class="btn btn-outline btn-xs show-qr-btn" data-id="${link.link_id}" data-url="${safeFullUrl}" style="flex:1;">Show QR</button>
                             <button class="btn btn-danger btn-xs delete-link-btn" data-id="${link.link_id}" style="flex:1;">Delete</button>
                         </div>
                     `;
                     linksMobileCards.appendChild(mCard);
                 });
 
-                if (window.innerWidth <= 768) {
-                    document.getElementById('links-table').parentNode.style.display = 'none';
-                    linksMobileCards.style.display = 'flex';
-                } else {
-                    document.getElementById('links-table').parentNode.style.display = 'block';
-                    linksMobileCards.style.display = 'none';
-                }
+                syncResponsiveLists();
 
                 // Toggles and status binds
                 document.querySelectorAll('.toggle-link-status').forEach(checkbox => {
@@ -904,10 +960,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (customSlugInput && slugStatusIndicator) {
         let slugCheckTimeout = null;
+        let slugCheckRequestId = 0;
         customSlugInput.addEventListener('input', function() {
             updateLinkPreview();
             const slug = this.value.trim();
             clearTimeout(slugCheckTimeout);
+            const requestId = ++slugCheckRequestId;
             
             if (!slug) {
                 slugStatusIndicator.innerHTML = '';
@@ -924,7 +982,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             slugCheckTimeout = setTimeout(async () => {
                 try {
-                    const res = await fetch(`/api/check-slug/${slug}`);
+                    const res = await fetch(`/api/check-slug/${encodeURIComponent(slug)}`);
+                    if (requestId !== slugCheckRequestId || customSlugInput.value.trim() !== slug) return;
                     if (res.ok) {
                         const data = await res.json();
                         if (data.available) {
@@ -1061,18 +1120,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             const card = document.createElement('div');
                             card.className = 'live-device-card animate-fade';
                             
-                            const batteryStr = sess.battery_level !== null ? `${Math.round(sess.battery_level * 100)}%` : 'N/A';
-                            const shortSessionId = sess.session_id.substring(0, 8);
+                            const batteryStr = sess.battery_level !== null && sess.battery_level !== undefined ? `${Math.round(sess.battery_level * 100)}%` : 'N/A';
+                            const sessionId = String(sess.session_id || '');
+                            const shortSessionId = sessionId.substring(0, 8);
 
                             card.innerHTML = `
                                 <div class="live-device-header">
                                     <span class="live-device-label">${escapeHtml(sess.label)}</span>
-                                    <span class="live-device-id">${shortSessionId}...</span>
+                                    <span class="live-device-id">${escapeHtml(shortSessionId)}...</span>
                                 </div>
                                 <div class="live-device-details">
                                     <div class="live-device-detail-item">
                                         <strong>Last seen:</strong>
-                                        <span class="live-device-detail-value">${sess.timestamp.split(' ')[1]}</span>
+                                        <span class="live-device-detail-value">${escapeHtml((sess.timestamp || '').split(' ')[1] || sess.timestamp || 'Unknown')}</span>
                                     </div>
                                     <div class="live-device-detail-item">
                                         <strong>City:</strong>
@@ -1084,13 +1144,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="live-device-detail-item">
                                         <strong>Platform:</strong>
-                                        <span class="live-device-detail-value" style="font-size:0.75rem;">${sess.platform}</span>
+                                        <span class="live-device-detail-value" style="font-size:0.75rem;">${escapeHtml(sess.platform || 'Unknown')}</span>
                                     </div>
                                 </div>
                             `;
 
                             card.addEventListener('click', () => {
-                                openLiveTrackingMapModal(sess.session_id);
+                                openLiveTrackingMapModal(sessionId);
                             });
 
                             list.appendChild(card);
@@ -1105,7 +1165,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Opens live tracking fullscreen map
     function openLiveTrackingMapModal(sessionId) {
-        document.getElementById('live-map-session-id').textContent = sessionId.substring(0, 16) + '...';
+        document.getElementById('live-map-session-id').textContent = String(sessionId || '').substring(0, 16) + '...';
         liveMapModal.classList.add('open');
 
         setTimeout(() => {
@@ -1132,7 +1192,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function updateLiveTrackingMap(sessionId) {
         try {
-            const statsRes = await fetch(`/api/session/${sessionId}/stats`);
+            const encodedSessionId = encodeURIComponent(sessionId);
+            const statsRes = await fetch(`/api/session/${encodedSessionId}/stats`);
             let durationStr = '0s';
             let distanceStr = '0 m';
             let speedStr = '0.0 km/h';
@@ -1162,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('live-map-duration').textContent = durationStr;
             document.getElementById('live-map-speed').textContent = speedStr;
 
-            const pathRes = await fetch(`/api/live/path/${sessionId}`);
+            const pathRes = await fetch(`/api/live/path/${encodedSessionId}`);
             if (pathRes.ok) {
                 const points = await pathRes.json();
                 if (points.length === 0) return;
@@ -1172,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const latlngs = [];
                 points.forEach(pt => {
-                    if (pt.latitude && pt.longitude) latlngs.push([pt.latitude, pt.longitude]);
+                    if (hasValidCoordinates(pt)) latlngs.push([Number(pt.latitude), Number(pt.longitude)]);
                 });
 
                 if (latlngs.length > 0) {
@@ -1233,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const latestAlert = alerts.find(a => !a.is_read);
                     if (latestAlert) {
                         const typeText = latestAlert.alert_type === 'ENTER' ? 'ENTERED' : 'EXITED';
-                        document.getElementById('geofence-alert-text').textContent = `Geofence Alert: Device ${latestAlert.session_id.substring(0,8)} ${typeText} zone "${latestAlert.geofence_name}"!`;
+                        document.getElementById('geofence-alert-text').textContent = `Geofence Alert: Device ${String(latestAlert.session_id || '').substring(0,8)} ${typeText} zone "${latestAlert.geofence_name || 'Unknown'}"!`;
                         document.getElementById('geofence-alert-banner').classList.remove('hidden');
                     }
                 }
@@ -1255,6 +1316,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const unreadClass = alert.is_read ? '' : 'unread';
                             const badgeClass = alert.alert_type === 'ENTER' ? 'enter' : 'exit';
                             const badgeText = alert.alert_type === 'ENTER' ? 'Entered' : 'Exited';
+                            const alertSessionId = String(alert.session_id || '');
                             const markReadBtn = alert.is_read 
                                 ? '' 
                                 : `<button class="btn btn-secondary btn-xs read-alert-btn" data-id="${alert.id}">Mark as Read</button>`;
@@ -1266,7 +1328,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="geofence-alert-info">Zone: <b>${escapeHtml(alert.geofence_name)}</b></span>
                                 </div>
                                 <div class="geofence-alert-info" style="font-size:0.8rem; margin-top:2px;">
-                                    Session ID: <code style="color:var(--accent);">${alert.session_id.substring(0, 12)}...</code>
+                                    Session ID: <code style="color:var(--accent);">${escapeHtml(alertSessionId.substring(0, 12))}...</code>
                                 </div>
                                 <div class="geofence-alert-meta">
                                     <span>${alert.timestamp}</span>
@@ -1342,27 +1404,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Responsive view handling on resize
     window.addEventListener('resize', () => {
-        const locationsTable = document.getElementById('locations-table');
-        if (locationsTable) {
-            if (window.innerWidth <= 768) {
-                locationsTable.parentNode.style.display = 'none';
-                locationsMobileCards.style.display = 'flex';
-            } else {
-                locationsTable.parentNode.style.display = 'block';
-                locationsMobileCards.style.display = 'none';
-            }
-        }
-        
-        const linksTable = document.getElementById('links-table');
-        if (linksTable) {
-            if (window.innerWidth <= 768) {
-                linksTable.parentNode.style.display = 'none';
-                linksMobileCards.style.display = 'flex';
-            } else {
-                linksTable.parentNode.style.display = 'block';
-                linksMobileCards.style.display = 'none';
-            }
-        }
+        syncResponsiveLists();
     });
 
     // Initializations

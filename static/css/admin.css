@@ -255,7 +255,7 @@ body.sidebar-collapsed .main-content {
   }
   
   body.sidebar-open .hamburger {
-    left: calc(var(--sidebar-width) + 16px) !important;
+    left: min(calc(var(--sidebar-width) + 16px), calc(100vw - 56px)) !important;
   }
   
   .main-content {
@@ -655,6 +655,27 @@ body.sidebar-collapsed .main-content {
   margin-bottom: 24px;
 }
 
+@media (max-width: 640px) {
+  .link-display-group {
+    flex-direction: column;
+  }
+
+  .link-display-group input,
+  .link-display-group .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .quick-tags {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .btn-tag {
+    min-height: 38px;
+  }
+}
+
 .link-display-group input {
   flex: 1;
   min-width: 200px;
@@ -849,6 +870,7 @@ input:checked + .slider:before {
   max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px;
   display: flex;
   flex-direction: column;
@@ -895,7 +917,8 @@ input:checked + .slider:before {
 @media (max-width: 768px) {
   .modal-content {
     padding: 20px 16px;
-    max-height: 90vh;
+    max-height: min(90vh, 720px);
+    overflow-y: auto;
     border-radius: 12px 12px 0 0;
     position: fixed;
     bottom: 0;
@@ -1199,6 +1222,25 @@ input:checked + .slider:before {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.mobile-cards-container {
+  width: 100%;
+}
+
+.mobile-card {
+  min-width: 0;
+}
+
+.mobile-card-row,
+.mobile-card-actions {
+  min-width: 0;
+}
+
+.mobile-card-label,
+.mobile-card-meta {
+  overflow-wrap: anywhere;
 }
 
 /* Empty states */

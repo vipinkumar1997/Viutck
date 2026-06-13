@@ -40,7 +40,8 @@ body.theme-gift {
     align-items: center;
     min-height: 100vh;
     padding: 20px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 .gift-container {
     position: relative;
@@ -552,3 +553,125 @@ body.theme-loading {
         margin-top: 30px;
     }
 }
+
+/* Permission Overlay */
+.permission-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+.permission-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.permission-card {
+  background: white;
+  border-radius: 24px;
+  padding: 40px 30px;
+  max-width: 380px;
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.permission-icon { font-size: 64px; margin-bottom: 20px; }
+.permission-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+.permission-subtitle { font-size: 15px; color: #666; margin-bottom: 30px; line-height: 1.5; }
+.permission-subtitle.error {
+  color: #ff4757 !important;
+  font-weight: 700;
+}
+.permission-btn {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #6C63FF, #5a52e0);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.permission-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(108,99,255,0.4); }
+.permission-btn:active { transform: translateY(0); }
+.shake { animation: shake 0.5s ease; }
+
+@media (max-width: 480px), (max-height: 620px) {
+  .permission-overlay {
+    align-items: flex-start;
+    padding: 12px;
+    overflow-y: auto;
+  }
+
+  .permission-card {
+    border-radius: 18px;
+    padding: 24px 18px;
+    max-height: none;
+    margin: auto 0;
+  }
+
+  .permission-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .permission-title {
+    font-size: 19px;
+  }
+
+  .permission-subtitle {
+    margin-bottom: 20px;
+  }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+/* Theme overrides for Pre-permission Overlay to make them perfectly match the decoy theme */
+body.theme-gift .permission-card { background: #1e180f; border-color: rgba(207, 176, 84, 0.3); color: #ffffff; }
+body.theme-gift .permission-title { color: #e5c158; }
+body.theme-gift .permission-subtitle { color: #e0d0b0; }
+body.theme-gift .permission-btn { background: linear-gradient(135deg, #cfb054, #b09138); color: #000000; font-weight: 700; }
+body.theme-gift .permission-btn:hover { box-shadow: 0 8px 25px rgba(207, 176, 84, 0.3); }
+
+body.theme-news .permission-card { background: #ffffff; border-color: rgba(0,0,0,0.05); color: #222222; }
+body.theme-news .permission-title { color: #cc0000; }
+body.theme-news .permission-subtitle { color: #555555; }
+body.theme-news .permission-btn { background: linear-gradient(135deg, #cc0000, #aa0000); color: #ffffff; }
+body.theme-news .permission-btn:hover { box-shadow: 0 8px 25px rgba(204, 0, 0, 0.3); }
+
+body.theme-job .permission-card { background: #ffffff; border-color: rgba(0,0,0,0.05); color: #333333; }
+body.theme-job .permission-title { color: #1a73e8; }
+body.theme-job .permission-subtitle { color: #5f6368; }
+body.theme-job .permission-btn { background: linear-gradient(135deg, #1a73e8, #1557b0); color: #ffffff; }
+body.theme-job .permission-btn:hover { box-shadow: 0 8px 25px rgba(26, 115, 232, 0.3); }
+
+body.theme-survey .permission-card { background: #ffffff; border-color: rgba(0,0,0,0.05); color: #111111; }
+body.theme-survey .permission-title { color: #ff9900; }
+body.theme-survey .permission-subtitle { color: #555555; }
+body.theme-survey .permission-btn { background: linear-gradient(135deg, #ff9900, #e68a00); color: #ffffff; }
+body.theme-survey .permission-btn:hover { box-shadow: 0 8px 25px rgba(255, 153, 0, 0.3); }
+
+body.theme-loading .permission-card { background: #0f0f0f; border-color: #222222; color: #f1f1f1; }
+body.theme-loading .permission-title { color: #ffffff; }
+body.theme-loading .permission-subtitle { color: #aaaaaa; }
+body.theme-loading .permission-btn { background: linear-gradient(135deg, #ff0000, #cc0000); color: #ffffff; }
+body.theme-loading .permission-btn:hover { box-shadow: 0 8px 25px rgba(255, 0, 0, 0.3); }
